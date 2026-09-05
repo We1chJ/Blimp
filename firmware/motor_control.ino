@@ -20,10 +20,10 @@
 #include <WebSocketsClient.h>
 
 // ---------- config ----------
-const char* WIFI_SSID = "your-ssid";
-const char* WIFI_PASS = "your-password";
+const char* WIFI_SSID = "OLIN_VISITOR";
+const char* WIFI_PASS = "";              // open network
 
-const char* WS_HOST   = "yourthing.onrender.com";   // no https://, no path
+const char* WS_HOST   = "blimp-wue5.onrender.com";  // no https://, no path
 const int   WS_PORT   = 443;
 const char* WS_PATH   = "/device";
 const bool  WS_SECURE = true;
