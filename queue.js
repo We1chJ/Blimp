@@ -24,6 +24,7 @@ class CommandQueue {
   }
 
   push(cmd) {
+    if (!this.device) return false;          // no device: drop, never bank stale commands
     if (this.queue.length >= MAX_QUEUE) return false;
     this.queue.push(cmd);
     this.onDepthChange(this.queue.length);

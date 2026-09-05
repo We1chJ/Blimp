@@ -20,7 +20,7 @@
 #include <WebSocketsClient.h>
 
 // ---------- config ----------
-const char* WIFI_SSID = "OLIN_VISITOR";
+const char* WIFI_SSID = "OLIN-VISITOR";
 const char* WIFI_PASS = "";              // open network
 
 const char* WS_HOST   = "blimp-wue5.onrender.com";  // no https://, no path
@@ -144,6 +144,13 @@ void webSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
   }
 }
 
+void startWifi() {
+  // An open network wants begin(ssid) with no password argument. Passing an
+  // empty string makes some core versions attempt a WPA handshake and fail.
+  if (strlen(WIFI_PASS) == 0) WiFi.begin(WIFI_SSID);
+  else                        WiFi.begin(WIFI_SSID, WIFI_PASS);
+}
+
 void setup() {
   Serial.begin(115200);
 
@@ -152,11 +159,19 @@ void setup() {
   stopAll();                       // claims all six LEDC channels up front
 
   WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  startWifi();
+
   Serial.print("Connecting to WiFi");
+  unsigned long t0 = millis();
   while (WiFi.status() != WL_CONNECTED) {
     delay(300);
     Serial.print(".");
+    if (millis() - t0 > 15000) {          // say why, then start over
+      Serial.printf("\n  still trying, WiFi.status() = %d\n", WiFi.status());
+      WiFi.disconnect();
+      startWifi();
+      t0 = millis();
+    }
   }
   Serial.printf("\nIP: %s\n", WiFi.localIP().toString().c_str());
 
