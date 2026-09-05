@@ -79,7 +79,7 @@ uiWss.on('connection', ws => {
       return;
     }
 
-    const m = cmd.match(/^([abc])\s*(-?\d{1,3})$/);
+    const m = cmd.match(/^([lru])\s*(-?\d{1,3})$/);
     if (m) {
       const value = Math.max(-100, Math.min(100, parseInt(m[2], 10)));
       cq.push(`${m[1]} ${value}`);

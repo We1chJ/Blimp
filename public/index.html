@@ -20,9 +20,9 @@
 
 <h2>Motor control</h2>
 
-<div class="row"><label>Motor A</label><input id="a" type="number" min="-100" max="100" value="0"></div>
-<div class="row"><label>Motor B</label><input id="b" type="number" min="-100" max="100" value="0"></div>
-<div class="row"><label>Motor C</label><input id="c" type="number" min="-100" max="100" value="0"></div>
+<div class="row"><label>Left</label><input id="l" type="number" min="-100" max="100" value="0"></div>
+<div class="row"><label>Right</label><input id="r" type="number" min="-100" max="100" value="0"></div>
+<div class="row"><label>Lift</label><input id="u" type="number" min="-100" max="100" value="0"></div>
 
 <button id="send">Send all</button>
 <button id="stop">STOP</button>
@@ -85,16 +85,16 @@ function sendOne(id) {
   send(id + ' ' + clamp(document.getElementById(id)));
 }
 
-['a','b','c'].forEach(id => {
+['l','r','u'].forEach(id => {
   const el = document.getElementById(id);
   el.addEventListener('change', () => sendOne(id));
   el.addEventListener('keydown', e => { if (e.key === 'Enter') sendOne(id); });
 });
 
-document.getElementById('send').onclick = () => ['a','b','c'].forEach(sendOne);
+document.getElementById('send').onclick = () => ['l','r','u'].forEach(sendOne);
 
 document.getElementById('stop').onclick = () => {
-  ['a','b','c'].forEach(id => document.getElementById(id).value = 0);
+  ['l','r','u'].forEach(id => document.getElementById(id).value = 0);
   send('s');
 };
 </script>

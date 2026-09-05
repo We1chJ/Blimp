@@ -1,5 +1,20 @@
-// XIAO ESP32C3 + 2x DRV8833
-// Three motors, commands from a cloud WebSocket server or the Serial Monitor
+// XIAO ESP32C3 + 2x DRV8833 - blimp motor control
+//
+// Three motors:
+//   left  + right  -> differential pair, forward/reverse and yaw
+//   lift           -> bottom motor, altitude
+//
+// Commands (from the WebSocket server or the Serial Monitor at 115200,
+// line ending = Newline):
+//   l 75      -> left motor to 75%
+//   r -30     -> right motor reverse at 30%
+//   u 50      -> lift motor to 50%
+//   40        -> both drive motors to 40% (lift unchanged)
+//   s         -> stop everything
+//   ?         -> print current speeds
+//
+// Six PWM pins, which is exactly the six LEDC channels the C3 has.
+// All six are claimed during setup(), so nothing else can use PWM after boot.
 
 #include <WiFi.h>
 #include <WebSocketsClient.h>
@@ -16,11 +31,15 @@ const bool  WS_SECURE = true;
 const unsigned long FAILSAFE_MS = 2000;   // stop if the link goes quiet
 // ----------------------------
 
-const int AIN1 = D0, AIN2 = D1;   // motor A  (DRV8833 #1, channel A)
-const int BIN1 = D2, BIN2 = D3;   // motor B  (DRV8833 #1, channel B)
-const int CIN1 = D4, CIN2 = D5;   // motor C  (DRV8833 #2, channel A)
+// DRV8833 #1 drives the differential pair. Pins carried over from the
+// original two-motor bench sketch, so existing wiring still works.
+const int LIN1 = D8, LIN2 = D7;   // left   (DRV8833 #1, channel A)
+const int RIN1 = D1, RIN2 = D0;   // right  (DRV8833 #1, channel B)
 
-int speedA = 0, speedB = 0, speedC = 0;   // -100 .. 100
+// DRV8833 #2, channel A only. Channel B is unused - leave BIN1/BIN2 open.
+const int UIN1 = D2, UIN2 = D3;   // lift   (DRV8833 #2, channel A)
+
+int speedL = 0, speedR = 0, speedU = 0;   // -100 .. 100
 
 WebSocketsClient webSocket;
 unsigned long lastCommandMs = 0;
@@ -30,34 +49,34 @@ void setMotor(int in1, int in2, int percent) {
   percent = constrain(percent, -100, 100);
   int pwm = map(abs(percent), 0, 100, 0, 255);
 
-  if (percent >= 0) {
+  if (percent >= 0) {          // forward
     analogWrite(in1, pwm);
     analogWrite(in2, 0);
-  } else {
+  } else {                     // reverse
     analogWrite(in1, 0);
     analogWrite(in2, pwm);
   }
 }
 
 void applySpeeds() {
-  setMotor(AIN1, AIN2, speedA);
-  setMotor(BIN1, BIN2, speedB);
-  setMotor(CIN1, CIN2, speedC);
+  setMotor(LIN1, LIN2, speedL);
+  setMotor(RIN1, RIN2, speedR);
+  setMotor(UIN1, UIN2, speedU);
 
-  Serial.printf("A=%d%% B=%d%% C=%d%%\n", speedA, speedB, speedC);
+  Serial.printf("L=%d%%  R=%d%%  U=%d%%\n", speedL, speedR, speedU);
 
   if (linkUp) {
     char buf[64];
-    snprintf(buf, sizeof(buf), "{\"a\":%d,\"b\":%d,\"c\":%d}", speedA, speedB, speedC);
+    snprintf(buf, sizeof(buf), "{\"l\":%d,\"r\":%d,\"u\":%d}", speedL, speedR, speedU);
     webSocket.sendTXT(buf);
   }
 }
 
 void stopAll() {
-  speedA = speedB = speedC = 0;
-  setMotor(AIN1, AIN2, 0);
-  setMotor(BIN1, BIN2, 0);
-  setMotor(CIN1, CIN2, 0);
+  speedL = speedR = speedU = 0;
+  setMotor(LIN1, LIN2, 0);
+  setMotor(RIN1, RIN2, 0);
+  setMotor(UIN1, UIN2, 0);
 }
 
 void handleCommand(String cmd) {
@@ -70,7 +89,7 @@ void handleCommand(String cmd) {
   if (cmd == "ping") return;              // keepalive only
 
   if (cmd == "s" || cmd == "stop") {
-    speedA = speedB = speedC = 0;
+    speedL = speedR = speedU = 0;
     applySpeeds();
     return;
   }
@@ -81,23 +100,25 @@ void handleCommand(String cmd) {
   }
 
   char which = cmd.charAt(0);
-  if (which == 'a' || which == 'b' || which == 'c') {
-    int value = constrain(cmd.substring(1).toInt(), -100, 100);
-    if      (which == 'a') speedA = value;
-    else if (which == 'b') speedB = value;
-    else                   speedC = value;
+  if (which == 'l' || which == 'r' || which == 'u') {
+    int value = constrain(cmd.substring(1).toInt(), -100, 100);   // "l 75" and "l75"
+    if      (which == 'l') speedL = value;
+    else if (which == 'r') speedR = value;
+    else                   speedU = value;
     applySpeeds();
     return;
   }
 
+  // Plain number: drive both differential motors, leave altitude alone.
   if (isDigit(which) || which == '-' || which == '+') {
     int value = constrain(cmd.toInt(), -100, 100);
-    speedA = speedB = speedC = value;
+    speedL = value;
+    speedR = value;
     applySpeeds();
     return;
   }
 
-  Serial.println("Unknown. Use: a 75 | b -30 | c 50 | 40 | s | ?");
+  Serial.println("Unknown. Use: l 75 | r -30 | u 50 | 40 | s | ?");
 }
 
 void webSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
@@ -126,9 +147,9 @@ void webSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
 void setup() {
   Serial.begin(115200);
 
-  int pins[] = { AIN1, AIN2, BIN1, BIN2, CIN1, CIN2 };
+  int pins[] = { LIN1, LIN2, RIN1, RIN2, UIN1, UIN2 };
   for (int i = 0; i < 6; i++) pinMode(pins[i], OUTPUT);
-  stopAll();
+  stopAll();                       // claims all six LEDC channels up front
 
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
@@ -146,7 +167,7 @@ void setup() {
   webSocket.setReconnectInterval(3000);
   webSocket.enableHeartbeat(10000, 3000, 2);
 
-  Serial.println("Ready.");
+  Serial.println("Blimp ready. Type: l 75 | r -30 | u 50 | 40 | s | ?");
 }
 
 void loop() {
@@ -156,7 +177,7 @@ void loop() {
     handleCommand(Serial.readStringUntil('\n'));
   }
 
-  if ((speedA || speedB || speedC) && millis() - lastCommandMs > FAILSAFE_MS) {
+  if ((speedL || speedR || speedU) && millis() - lastCommandMs > FAILSAFE_MS) {
     Serial.println("Failsafe: link quiet, stopping.");
     stopAll();
   }
