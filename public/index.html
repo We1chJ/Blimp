@@ -2,50 +2,274 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Motor control</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Blimp control</title>
 <style>
-  body { font-family: system-ui, sans-serif; max-width: 420px; margin: 40px auto; padding: 0 16px; }
-  .row { display: flex; align-items: center; gap: 12px; margin: 14px 0; }
-  .row label { width: 80px; }
-  .row input { flex: 1; padding: 10px; font-size: 16px; }
-  button { width: 100%; padding: 14px; font-size: 16px; margin-top: 8px; cursor: pointer; }
-  #stop { background: #c62828; color: #fff; border: none; border-radius: 6px; }
-  #status, #depth, #state { font-size: 13px; color: #555; margin-top: 10px; }
-  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #bbb; margin-right: 6px; }
-  .dot.on { background: #2e7d32; }
+  :root {
+    --bg:         #0e1113;
+    --panel:      #171b1f;
+    --panel-hi:   #1e242a;
+    --line:       #2a3238;
+    --text:       #e6ebef;
+    --dim:        #7d8b96;
+    --accent:     #35c9a5;
+    --accent-dim: #1b6b59;
+    --danger:     #e03e3e;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 24px 16px 40px;
+    background: radial-gradient(120% 90% at 50% 0%, #161c21 0%, var(--bg) 60%);
+    color: var(--text);
+    font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    min-height: 100vh;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .wrap { max-width: 620px; margin: 0 auto; }
+
+  h1 {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin: 0 0 20px;
+    text-align: center;
+  }
+
+  /* ---------- sticks ---------- */
+  .sticks {
+    display: flex;
+    gap: 18px;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .stick-box {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .stick-label {
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+
+  .pad {
+    position: relative;
+    background: radial-gradient(circle at 50% 45%, var(--panel-hi) 0%, #12171b 70%);
+    border: 1px solid var(--line);
+    touch-action: none;
+    cursor: grab;
+    overflow: hidden;
+  }
+  .pad:active { cursor: grabbing; }
+
+  #padDrive { width: 216px; height: 216px; border-radius: 50%; }
+  #padLift  { width: 96px;  height: 216px; border-radius: 48px; }
+
+  .pad .guide { position: absolute; background: var(--line); pointer-events: none; }
+  .guide.h { left: 12%; right: 12%; top: 50%; height: 1px; }
+  .guide.v { top: 12%; bottom: 12%; left: 50%; width: 1px; }
+
+  .pad .ring {
+    position: absolute;
+    inset: 24%;
+    border: 1px dashed #232b31;
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  .knob {
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 68px; height: 68px;
+    margin: -34px 0 0 -34px;
+    border-radius: 50%;
+    background: linear-gradient(160deg, #3a454d 0%, #222a30 60%, #1a2126 100%);
+    border: 1px solid #46535c;
+    box-shadow: 0 6px 14px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.10);
+    pointer-events: none;
+  }
+  #padLift .knob { width: 74px; height: 54px; margin: -27px 0 0 -37px; border-radius: 28px; }
+
+  .pad.live .knob {
+    border-color: var(--accent-dim);
+    box-shadow: 0 6px 16px rgba(0,0,0,.6), 0 0 0 1px var(--accent-dim),
+                inset 0 1px 0 rgba(255,255,255,.12);
+  }
+
+  .knob::after {
+    content: '';
+    position: absolute;
+    left: 50%; top: 50%;
+    width: 8px; height: 8px;
+    margin: -4px 0 0 -4px;
+    border-radius: 50%;
+    background: var(--dim);
+  }
+  .pad.live .knob::after { background: var(--accent); }
+
+  .readout {
+    font: 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--dim);
+    letter-spacing: .04em;
+    white-space: pre;
+  }
+  .readout b { color: var(--accent); font-weight: 600; }
+
+  .hint { font-size: 11px; color: #5d6a74; letter-spacing: .06em; }
+
+  /* ---------- stop ---------- */
+  #stop {
+    display: block;
+    width: 100%;
+    max-width: 348px;
+    margin: 18px auto 0;
+    padding: 16px;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: .18em;
+    color: #fff;
+    background: var(--danger);
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(224,62,62,.28);
+  }
+  #stop:active { transform: translateY(1px); box-shadow: none; }
+
+  /* ---------- manual ---------- */
+  .manual {
+    margin: 22px auto 0;
+    max-width: 348px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px 16px 16px;
+  }
+  .manual h2 {
+    font-size: 10px; font-weight: 600;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: var(--dim); margin: 0 0 10px;
+  }
+  .mrow { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .mrow label { width: 46px; font-size: 12px; color: var(--dim); }
+  .mrow input {
+    flex: 1; min-width: 0;
+    padding: 8px 10px;
+    font: 13px ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--text);
+    background: #10151a;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  .mrow input:focus { outline: none; border-color: var(--accent-dim); }
+  #send {
+    width: 100%; margin-top: 6px; padding: 10px;
+    font-size: 13px; font-weight: 600;
+    color: var(--text); background: var(--panel-hi);
+    border: 1px solid var(--line); border-radius: 8px; cursor: pointer;
+  }
+  #send:active { background: #262e35; }
+
+  /* ---------- status ---------- */
+  .status {
+    max-width: 348px;
+    margin: 18px auto 0;
+    font: 12px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace;
+    color: var(--dim);
+  }
+  .dot {
+    display: inline-block; width: 8px; height: 8px;
+    border-radius: 50%; background: #4a555d; margin-right: 7px;
+    vertical-align: middle;
+  }
+  .dot.on { background: var(--accent); box-shadow: 0 0 8px var(--accent-dim); }
+
+  @media (max-width: 560px) {
+    #padDrive { width: 190px; height: 190px; }
+    #padLift  { width: 84px;  height: 190px; }
+  }
 </style>
 </head>
 <body>
+<div class="wrap">
 
-<h2>Motor control</h2>
+  <h1>Blimp control</h1>
 
-<div class="row"><label>Left</label><input id="l" type="number" min="-100" max="100" value="0"></div>
-<div class="row"><label>Right</label><input id="r" type="number" min="-100" max="100" value="0"></div>
-<div class="row"><label>Lift</label><input id="u" type="number" min="-100" max="100" value="0"></div>
+  <div class="sticks">
+    <div class="stick-box">
+      <div class="stick-label">Drive</div>
+      <div class="pad" id="padDrive">
+        <div class="guide h"></div>
+        <div class="guide v"></div>
+        <div class="ring"></div>
+        <div class="knob" id="knobDrive"></div>
+      </div>
+      <div class="readout" id="roDrive">L <b>0</b>   R <b>0</b></div>
+      <div class="hint">W A S D</div>
+    </div>
 
-<button id="send">Send all</button>
-<button id="stop">STOP</button>
+    <div class="stick-box">
+      <div class="stick-label">Altitude</div>
+      <div class="pad" id="padLift">
+        <div class="guide h"></div>
+        <div class="knob" id="knobLift"></div>
+      </div>
+      <div class="readout" id="roLift">U <b>0</b></div>
+      <div class="hint">&uarr; &darr;</div>
+    </div>
+  </div>
 
-<div id="status"><span class="dot" id="dot"></span><span id="statusText">connecting…</span></div>
-<div id="depth">queue: idle</div>
-<div id="state">device state: —</div>
+  <button id="stop">STOP</button>
+
+  <div class="manual">
+    <h2>Manual</h2>
+    <div class="mrow"><label>Left</label><input id="l" type="number" min="-100" max="100" value="0"></div>
+    <div class="mrow"><label>Right</label><input id="r" type="number" min="-100" max="100" value="0"></div>
+    <div class="mrow"><label>Lift</label><input id="u" type="number" min="-100" max="100" value="0"></div>
+    <button id="send">Send all</button>
+  </div>
+
+  <div class="status">
+    <div><span class="dot" id="dot"></span><span id="statusText">connecting...</span></div>
+    <div id="depth">queue: idle</div>
+    <div id="state">device state: &mdash;</div>
+  </div>
+
+</div>
 
 <script>
+// ---------------- socket ----------------
 const proto = location.protocol === 'https:' ? 'wss' : 'ws';
 let ws;
+let lastMsg = null;          // last "m l r u" transmitted
 
 function connect() {
   ws = new WebSocket(proto + '://' + location.host + '/ui');
 
-  ws.onopen = () => {
-    statusText.textContent = 'connected';
-  };
+  ws.onopen = () => { statusText.textContent = 'connected'; };
 
   ws.onclose = () => {
-    lastSent = null;                 // board resets to 0 on drop, so resend
+    lastMsg = null;                       // board zeroes on drop, so resend
     dot.classList.remove('on');
-    statusText.textContent = 'disconnected, retrying…';
+    statusText.textContent = 'disconnected, retrying...';
     setTimeout(connect, 2000);
   };
 
@@ -55,14 +279,12 @@ function connect() {
     if (m.type === 'status') {
       dot.classList.toggle('on', m.deviceOnline);
       statusText.textContent = (m.deviceOnline ? 'device online' : 'device offline')
-        + ' · ' + m.users + ' user' + (m.users === 1 ? '' : 's');
+        + ' - ' + m.users + ' user' + (m.users === 1 ? '' : 's');
     }
-
     if (m.type === 'depth') {
       const secs = (m.depth * m.tickMs / 1000).toFixed(1);
       depth.textContent = m.depth ? 'queue: ' + m.depth + ' (~' + secs + 's behind)' : 'queue: idle';
     }
-
     if (m.type === 'state') {
       state.textContent = 'device state: ' + m.data;
     }
@@ -74,6 +296,156 @@ function send(text) {
   if (ws && ws.readyState === 1) ws.send(text);
 }
 
+// ---------------- control state ----------------
+// Every input funnels into these, all normalised to -1..1.
+const drivePtr = { x: 0, y: 0 };     // pointer on the left pad
+const driveKey = { x: 0, y: 0 };     // WASD
+let liftPtr = 0, liftKey = 0;
+
+let keyDrive = false, keyLift = false;   // is the keyboard steering right now?
+let dirty = false;                       // sticks moved since the last send
+
+function driveVec() { return keyDrive ? driveKey : drivePtr; }
+function liftVal()  { return keyLift ? liftKey  : liftPtr;  }
+
+// Arcade mix: forward/back on Y, turn on X, scaled down if it would clip.
+function motors() {
+  const v = driveVec();
+  const t = v.y * 100;
+  const s = v.x * 100;
+  let l = t + s, r = t - s;
+  const peak = Math.max(Math.abs(l), Math.abs(r));
+  if (peak > 100) { l = l * 100 / peak; r = r * 100 / peak; }
+  return [Math.round(l), Math.round(r), Math.round(liftVal() * 100)];
+}
+
+function paint() {
+  const [l, r, u] = motors();
+  const v = driveVec();
+
+  const R = padDrive.clientWidth / 2 - 34;
+  knobDrive.style.transform = 'translate(' + (v.x * R) + 'px,' + (-v.y * R) + 'px)';
+  padDrive.classList.toggle('live', v.x !== 0 || v.y !== 0);
+
+  const H = padLift.clientHeight / 2 - 27;
+  knobLift.style.transform = 'translate(0,' + (-liftVal() * H) + 'px)';
+  padLift.classList.toggle('live', liftVal() !== 0);
+
+  roDrive.innerHTML = 'L <b>' + l + '</b>   R <b>' + r + '</b>';
+  roLift.innerHTML = 'U <b>' + u + '</b>';
+}
+
+// Throttled transmit: the sticks move continuously, the link need not.
+function flush() {
+  if (!dirty) return;                    // idle: do not stomp on a manual send
+  const msg = 'm ' + motors().join(' ');
+  if (msg !== lastMsg) { lastMsg = msg; send(msg); }
+  dirty = false;                         // stick state is on the wire; go quiet
+}
+setInterval(flush, 100);                 // 10/s, well under the server's limit
+
+function touched()  { dirty = true; paint(); }
+function released() { dirty = true; paint(); flush(); }   // stop goes out at once
+
+// ---------------- pointer handling ----------------
+function bindPad(pad, onMove, onEnd) {
+  let id = null;
+
+  pad.addEventListener('pointerdown', e => {
+    id = e.pointerId;
+    pad.setPointerCapture(id);
+    onMove(e);
+    touched();
+  });
+
+  pad.addEventListener('pointermove', e => {
+    if (e.pointerId !== id) return;
+    onMove(e);
+    touched();
+  });
+
+  const finish = e => {
+    if (e.pointerId !== id) return;
+    id = null;
+    onEnd();
+    released();
+  };
+  pad.addEventListener('pointerup', finish);
+  pad.addEventListener('pointercancel', finish);
+}
+
+bindPad(padDrive, e => {
+  const b = padDrive.getBoundingClientRect();
+  let x = (e.clientX - b.left - b.width / 2) / (b.width / 2);
+  let y = -(e.clientY - b.top - b.height / 2) / (b.height / 2);
+  const d = Math.hypot(x, y);
+  if (d > 1) { x /= d; y /= d; }          // clamp into the circle
+  drivePtr.x = x; drivePtr.y = y;
+  keyDrive = false;
+}, () => { drivePtr.x = 0; drivePtr.y = 0; });
+
+bindPad(padLift, e => {
+  const b = padLift.getBoundingClientRect();
+  const y = -(e.clientY - b.top - b.height / 2) / (b.height / 2);
+  liftPtr = Math.max(-1, Math.min(1, y));
+  keyLift = false;
+}, () => { liftPtr = 0; });
+
+// ---------------- keyboard ----------------
+const held = Object.create(null);
+
+const DRIVE_KEYS = { w: [0, 1], s: [0, -1], a: [-1, 0], d: [1, 0] };
+const LIFT_KEYS  = { arrowup: 1, arrowdown: -1 };
+
+function recomputeKeys() {
+  let x = 0, y = 0;
+  for (const k in DRIVE_KEYS) {
+    if (held[k]) { x += DRIVE_KEYS[k][0]; y += DRIVE_KEYS[k][1]; }
+  }
+  const d = Math.hypot(x, y);
+  if (d > 1) { x /= d; y /= d; }          // diagonals stay inside the circle
+  driveKey.x = x; driveKey.y = y;
+  keyDrive = (x !== 0 || y !== 0);
+
+  let u = 0;
+  for (const k in LIFT_KEYS) if (held[k]) u += LIFT_KEYS[k];
+  liftKey = Math.max(-1, Math.min(1, u));
+  keyLift = (liftKey !== 0);
+}
+
+function isTyping(e) {
+  const t = e.target;
+  return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA');
+}
+
+addEventListener('keydown', e => {
+  if (isTyping(e)) return;
+  const k = e.key.toLowerCase();
+  if (!(k in DRIVE_KEYS) && !(k in LIFT_KEYS)) return;
+  e.preventDefault();
+  if (held[k]) return;                    // ignore auto-repeat
+  held[k] = true;
+  recomputeKeys();
+  touched();
+});
+
+addEventListener('keyup', e => {
+  const k = e.key.toLowerCase();
+  if (!(k in DRIVE_KEYS) && !(k in LIFT_KEYS)) return;
+  e.preventDefault();
+  held[k] = false;
+  recomputeKeys();
+  released();
+});
+
+// Losing focus mid-press would otherwise latch a key on forever.
+addEventListener('blur', () => {
+  for (const k in held) held[k] = false;
+  recomputeKeys();
+  released();
+});
+
+// ---------------- manual entry ----------------
 function clamp(el) {
   let v = parseInt(el.value, 10);
   if (isNaN(v)) v = 0;
@@ -82,30 +454,34 @@ function clamp(el) {
   return v;
 }
 
-let lastSent = null;   // the last "m l r u" string we transmitted
-
-// One message for all three motors. Clicking the button blurs the focused
-// input, which fires its 'change' first - both paths land here and build the
-// same string, so the dedupe collapses them into a single send.
-function sendAll() {
-  const v = ['l','r','u'].map(id => clamp(document.getElementById(id)));
+function sendManual() {
+  const v = ['l', 'r', 'u'].map(id => clamp(document.getElementById(id)));
   const msg = 'm ' + v.join(' ');
-  if (msg === lastSent) return;
-  lastSent = msg;
+  if (msg === lastMsg) return;
+  lastMsg = msg;
   send(msg);
 }
 
-['l','r','u'].forEach(id => {
-  document.getElementById(id).addEventListener('change', sendAll);
+['l', 'r', 'u'].forEach(id => {
+  document.getElementById(id).addEventListener('change', sendManual);
 });
+document.getElementById('send').onclick = sendManual;
 
-document.getElementById('send').onclick = sendAll;
-
+// ---------------- stop ----------------
 document.getElementById('stop').onclick = () => {
-  ['l','r','u'].forEach(id => { document.getElementById(id).value = 0; });
-  lastSent = 'm 0 0 0';
+  drivePtr.x = drivePtr.y = 0;
+  driveKey.x = driveKey.y = 0;
+  liftPtr = liftKey = 0;
+  keyDrive = keyLift = false;
+  for (const k in held) held[k] = false;
+  ['l', 'r', 'u'].forEach(id => { document.getElementById(id).value = 0; });
+  lastMsg = 'm 0 0 0';
+  dirty = false;
+  paint();
   send('s');
 };
+
+paint();
 </script>
 </body>
 </html>
