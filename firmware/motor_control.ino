@@ -37,7 +37,7 @@ const int LIN1 = D8, LIN2 = D7;   // left   (DRV8833 #1, channel A)
 const int RIN1 = D1, RIN2 = D0;   // right  (DRV8833 #1, channel B)
 
 // DRV8833 #2, channel A only. Channel B is unused - leave BIN1/BIN2 open.
-const int UIN1 = D2, UIN2 = D3;   // lift   (DRV8833 #2, channel A)
+const int UIN1 = D10, UIN2 = D9;  // lift   (DRV8833 #2, channel A)
 
 int speedL = 0, speedR = 0, speedU = 0;   // -100 .. 100
 
