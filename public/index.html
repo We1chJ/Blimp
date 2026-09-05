@@ -43,7 +43,7 @@ function connect() {
   };
 
   ws.onclose = () => {
-    for (const k in lastSent) delete lastSent[k];   // board resets to 0 on drop
+    lastSent = null;                 // board resets to 0 on drop, so resend
     dot.classList.remove('on');
     statusText.textContent = 'disconnected, retrying…';
     setTimeout(connect, 2000);
@@ -82,27 +82,28 @@ function clamp(el) {
   return v;
 }
 
-const lastSent = {};
+let lastSent = null;   // the last "m l r u" string we transmitted
 
-function sendOne(id) {
-  const v = clamp(document.getElementById(id));
-  if (lastSent[id] === v) return;   // board already holds this value
-  lastSent[id] = v;
-  send(id + ' ' + v);
+// One message for all three motors. Clicking the button blurs the focused
+// input, which fires its 'change' first - both paths land here and build the
+// same string, so the dedupe collapses them into a single send.
+function sendAll() {
+  const v = ['l','r','u'].map(id => clamp(document.getElementById(id)));
+  const msg = 'm ' + v.join(' ');
+  if (msg === lastSent) return;
+  lastSent = msg;
+  send(msg);
 }
 
-// 'change' already covers Enter and blur, so one listener is enough.
 ['l','r','u'].forEach(id => {
-  document.getElementById(id).addEventListener('change', () => sendOne(id));
+  document.getElementById(id).addEventListener('change', sendAll);
 });
 
-// Arrow, not forEach(sendOne): forEach would pass the index as a second arg.
-// Sends only what the board does not already hold; lastSent is cleared on
-// disconnect, so after a dropout this re-sends all three.
-document.getElementById('send').onclick = () => ['l','r','u'].forEach(id => sendOne(id));
+document.getElementById('send').onclick = sendAll;
 
 document.getElementById('stop').onclick = () => {
-  ['l','r','u'].forEach(id => { document.getElementById(id).value = 0; lastSent[id] = 0; });
+  ['l','r','u'].forEach(id => { document.getElementById(id).value = 0; });
+  lastSent = 'm 0 0 0';
   send('s');
 };
 </script>

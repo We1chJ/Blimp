@@ -54,6 +54,21 @@ void handleCommand(String cmd) {
     return;
   }
 
+  // Combined: "m <left> <right> <lift>" sets all three in one message, so a
+  // coordinated move lands atomically instead of arriving 50ms apart.
+  if (cmd.charAt(0) == 'm') {
+    int a, b, c;
+    if (sscanf(cmd.c_str() + 1, "%d %d %d", &a, &b, &c) == 3) {
+      speedL = constrain(a, -100, 100);
+      speedR = constrain(b, -100, 100);
+      speedU = constrain(c, -100, 100);
+      applySpeeds();
+    } else {
+      Serial.println("Bad m command. Use: m 60 -60 20");
+    }
+    return;
+  }
+
   char which = cmd.charAt(0);
   if (which == 'l' || which == 'r' || which == 'u') {
     int value = constrain(cmd.substring(1).toInt(), -100, 100);   // "l 75" and "l75"
@@ -73,7 +88,7 @@ void handleCommand(String cmd) {
     return;
   }
 
-  Serial.println("Unknown. Use: l 75 | r -30 | u 50 | 40 | s | ?");
+  Serial.println("Unknown. Use: l 75 | r -30 | u 50 | m 60 -60 20 | 40 | s | ?");
 }
 
 void setup() {
@@ -87,7 +102,7 @@ void setup() {
 
   delay(500);
   Serial.println("Three-motor bench test ready (no WiFi).");
-  Serial.println("Type: l 75 | r -30 | u 50 | 40 | s | ?");
+  Serial.println("Type: l 75 | r -30 | u 50 | m 60 -60 20 | 40 | s | ?");
 }
 
 void loop() {

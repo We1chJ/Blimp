@@ -79,6 +79,14 @@ uiWss.on('connection', ws => {
       return;
     }
 
+    // Combined form: "m <l> <r> <u>" - one message, all three applied at once.
+    const mm = cmd.match(/^m\s+(-?\d{1,3})\s+(-?\d{1,3})\s+(-?\d{1,3})$/);
+    if (mm) {
+      const v = mm.slice(1, 4).map(x => Math.max(-100, Math.min(100, parseInt(x, 10))));
+      cq.push(`m ${v[0]} ${v[1]} ${v[2]}`);
+      return;
+    }
+
     const m = cmd.match(/^([lru])\s*(-?\d{1,3})$/);
     if (m) {
       const value = Math.max(-100, Math.min(100, parseInt(m[2], 10)));
