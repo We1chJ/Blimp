@@ -43,6 +43,7 @@ function connect() {
   };
 
   ws.onclose = () => {
+    for (const k in lastSent) delete lastSent[k];   // board resets to 0 on drop
     dot.classList.remove('on');
     statusText.textContent = 'disconnected, retrying…';
     setTimeout(connect, 2000);
@@ -81,20 +82,27 @@ function clamp(el) {
   return v;
 }
 
+const lastSent = {};
+
 function sendOne(id) {
-  send(id + ' ' + clamp(document.getElementById(id)));
+  const v = clamp(document.getElementById(id));
+  if (lastSent[id] === v) return;   // board already holds this value
+  lastSent[id] = v;
+  send(id + ' ' + v);
 }
 
+// 'change' already covers Enter and blur, so one listener is enough.
 ['l','r','u'].forEach(id => {
-  const el = document.getElementById(id);
-  el.addEventListener('change', () => sendOne(id));
-  el.addEventListener('keydown', e => { if (e.key === 'Enter') sendOne(id); });
+  document.getElementById(id).addEventListener('change', () => sendOne(id));
 });
 
-document.getElementById('send').onclick = () => ['l','r','u'].forEach(sendOne);
+// Arrow, not forEach(sendOne): forEach would pass the index as a second arg.
+// Sends only what the board does not already hold; lastSent is cleared on
+// disconnect, so after a dropout this re-sends all three.
+document.getElementById('send').onclick = () => ['l','r','u'].forEach(id => sendOne(id));
 
 document.getElementById('stop').onclick = () => {
-  ['l','r','u'].forEach(id => document.getElementById(id).value = 0);
+  ['l','r','u'].forEach(id => { document.getElementById(id).value = 0; lastSent[id] = 0; });
   send('s');
 };
 </script>

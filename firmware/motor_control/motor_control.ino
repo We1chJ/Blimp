@@ -28,7 +28,8 @@ const int   WS_PORT   = 443;
 const char* WS_PATH   = "/device";
 const bool  WS_SECURE = true;
 
-const unsigned long FAILSAFE_MS = 2000;   // stop if the link goes quiet
+const unsigned long FAILSAFE_MS   = 2000;   // stop if the link goes quiet
+const unsigned long WIFI_CHECK_MS = 5000;   // how often to re-check WiFi
 // ----------------------------
 
 // DRV8833 #1 drives the differential pair. Pins carried over from the
@@ -43,6 +44,7 @@ int speedL = 0, speedR = 0, speedU = 0;   // -100 .. 100
 
 WebSocketsClient webSocket;
 unsigned long lastCommandMs = 0;
+unsigned long lastWifiCheck = 0;
 bool linkUp = false;
 
 void setMotor(int in1, int in2, int percent) {
@@ -145,6 +147,15 @@ void webSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
 }
 
 void startWifi() {
+  // Clear any stored config and let the station settle before connecting.
+  // Calling begin() straight after mode() leaves status stuck at
+  // WL_IDLE_STATUS: the attempt never actually starts.
+  WiFi.persistent(false);
+  WiFi.mode(WIFI_STA);
+  WiFi.setAutoReconnect(true);
+  WiFi.disconnect(true);
+  delay(200);
+
   // An open network wants begin(ssid) with no password argument. Passing an
   // empty string makes some core versions attempt a WPA handshake and fail.
   if (strlen(WIFI_PASS) == 0) WiFi.begin(WIFI_SSID);
@@ -158,7 +169,6 @@ void setup() {
   for (int i = 0; i < 6; i++) pinMode(pins[i], OUTPUT);
   stopAll();                       // claims all six LEDC channels up front
 
-  WiFi.mode(WIFI_STA);
   startWifi();
 
   Serial.print("Connecting to WiFi");
@@ -168,7 +178,6 @@ void setup() {
     Serial.print(".");
     if (millis() - t0 > 15000) {          // say why, then start over
       Serial.printf("\n  still trying, WiFi.status() = %d\n", WiFi.status());
-      WiFi.disconnect();
       startWifi();
       t0 = millis();
     }
@@ -187,6 +196,17 @@ void setup() {
 
 void loop() {
   webSocket.loop();
+
+  // WiFi has no self-healing of its own: setup() connects once and that is it.
+  // Without this the board sits offline forever after a single dropout.
+  if (millis() - lastWifiCheck > WIFI_CHECK_MS) {
+    lastWifiCheck = millis();
+    if (WiFi.status() != WL_CONNECTED) {
+      Serial.println("WiFi lost, reconnecting...");
+      stopAll();
+      startWifi();
+    }
+  }
 
   if (Serial.available()) {
     handleCommand(Serial.readStringUntil('\n'));
