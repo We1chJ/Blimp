@@ -13,14 +13,29 @@ class CommandQueue {
   }
 
   attach(ws) {
+    // A reconnecting board can leave its previous socket half-open. Drop it,
+    // so only one device socket is ever live.
+    if (this.device && this.device !== ws) {
+      try { this.device.terminate(); } catch (e) { /* already gone */ }
+    }
     this.device = ws;
     this.lastSent = 0;
+    this.queue.length = 0;
+    this.onDepthChange(0);
   }
 
-  detach() {
+  // Pass the socket that closed. A stale socket closing after the board has
+  // already reconnected must NOT detach the live one: that left the server
+  // reporting the device online while silently dropping every command.
+  detach(ws) {
+    if (ws && this.device !== ws) return;
     this.device = null;
     this.queue.length = 0;
     this.onDepthChange(0);
+  }
+
+  hasDevice() {
+    return !!this.device && this.device.readyState === 1;
   }
 
   push(cmd) {

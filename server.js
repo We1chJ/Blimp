@@ -31,7 +31,7 @@ const cq = new CommandQueue(depth => {
 function statusPayload() {
   return {
     type: 'status',
-    deviceOnline: deviceWss.clients.size > 0,
+    deviceOnline: cq.hasDevice(),
     users: uiWss.clients.size
   };
 }
@@ -48,7 +48,7 @@ deviceWss.on('connection', ws => {
 
   ws.on('close', () => {
     console.log('device disconnected');
-    cq.detach();
+    cq.detach(ws);
     broadcastUi(statusPayload());
   });
 });

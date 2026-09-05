@@ -30,6 +30,8 @@ const bool  WS_SECURE = true;
 
 const unsigned long FAILSAFE_MS   = 2000;   // stop if the link goes quiet
 const unsigned long WIFI_CHECK_MS = 5000;   // how often to re-check WiFi
+const unsigned long WS_REVIVE_MS  = 8000;   // silent this long: force a reconnect
+const unsigned long WS_RETRY_MS   = 15000;  // down this long: rebuild the client
 // ----------------------------
 
 // DRV8833 #1 drives the differential pair. Pins carried over from the
@@ -45,6 +47,7 @@ int speedL = 0, speedR = 0, speedU = 0;   // -100 .. 100
 WebSocketsClient webSocket;
 unsigned long lastCommandMs = 0;
 unsigned long lastWifiCheck = 0;
+unsigned long lastLinkOk    = 0;
 bool linkUp = false;
 
 void setMotor(int in1, int in2, int percent) {
@@ -161,6 +164,15 @@ void webSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
   }
 }
 
+void startWebSocket() {
+  if (WS_SECURE) webSocket.beginSSL(WS_HOST, WS_PORT, WS_PATH);
+  else           webSocket.begin(WS_HOST, WS_PORT, WS_PATH);
+
+  webSocket.onEvent(webSocketEvent);
+  webSocket.setReconnectInterval(3000);
+  webSocket.enableHeartbeat(10000, 3000, 2);
+}
+
 void startWifi() {
   // Clear any stored config and let the station settle before connecting.
   // Calling begin() straight after mode() leaves status stuck at
@@ -199,12 +211,8 @@ void setup() {
   }
   Serial.printf("\nIP: %s\n", WiFi.localIP().toString().c_str());
 
-  if (WS_SECURE) webSocket.beginSSL(WS_HOST, WS_PORT, WS_PATH);
-  else           webSocket.begin(WS_HOST, WS_PORT, WS_PATH);
-
-  webSocket.onEvent(webSocketEvent);
-  webSocket.setReconnectInterval(3000);
-  webSocket.enableHeartbeat(10000, 3000, 2);
+  startWebSocket();
+  lastLinkOk = millis();
 
   Serial.println("Blimp ready. Type: l 75 | r -30 | u 50 | m 60 -60 20 | 40 | s | ?");
 }
@@ -230,5 +238,30 @@ void loop() {
   if ((speedL || speedR || speedU) && millis() - lastCommandMs > FAILSAFE_MS) {
     Serial.println("Failsafe: link quiet, stopping.");
     stopAll();
+  }
+
+  if (linkUp) lastLinkOk = millis();
+
+  // The socket can stay open at the protocol level while the server has
+  // stopped talking to us: its library answers our heartbeat PINGs
+  // automatically, so the heartbeat never trips. Silence in the application
+  // traffic is the only reliable signal, so tear the link down ourselves.
+  if (linkUp && millis() - lastCommandMs > WS_REVIVE_MS) {
+    Serial.println("[ws] silent too long, forcing reconnect");
+    linkUp = false;
+    lastCommandMs = millis();
+    webSocket.disconnect();
+  }
+
+  // The library retries every 3s on its own, but if it ever wedges, rebuild
+  // the client outright. Between this and the WiFi watchdog above, the board
+  // never stops trying to get back: there is no state it can settle into
+  // where it has given up.
+  if (!linkUp && WiFi.status() == WL_CONNECTED &&
+      millis() - lastLinkOk > WS_RETRY_MS) {
+    Serial.println("[ws] down too long, rebuilding client");
+    lastLinkOk = millis();
+    webSocket.disconnect();
+    startWebSocket();
   }
 }
