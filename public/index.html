@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Motor control</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 420px; margin: 40px auto; padding: 0 16px; }
+  .row { display: flex; align-items: center; gap: 12px; margin: 14px 0; }
+  .row label { width: 80px; }
+  .row input { flex: 1; padding: 10px; font-size: 16px; }
+  button { width: 100%; padding: 14px; font-size: 16px; margin-top: 8px; cursor: pointer; }
+  #stop { background: #c62828; color: #fff; border: none; border-radius: 6px; }
+  #status, #depth, #state { font-size: 13px; color: #555; margin-top: 10px; }
+  .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #bbb; margin-right: 6px; }
+  .dot.on { background: #2e7d32; }
+</style>
+</head>
+<body>
+
+<h2>Motor control</h2>
+
+<div class="row"><label>Motor A</label><input id="a" type="number" min="-100" max="100" value="0"></div>
+<div class="row"><label>Motor B</label><input id="b" type="number" min="-100" max="100" value="0"></div>
+<div class="row"><label>Motor C</label><input id="c" type="number" min="-100" max="100" value="0"></div>
+
+<button id="send">Send all</button>
+<button id="stop">STOP</button>
+
+<div id="status"><span class="dot" id="dot"></span><span id="statusText">connecting…</span></div>
+<div id="depth">queue: idle</div>
+<div id="state">device state: —</div>
+
+<script>
+const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+let ws;
+
+function connect() {
+  ws = new WebSocket(proto + '://' + location.host + '/ui');
+
+  ws.onopen = () => {
+    statusText.textContent = 'connected';
+  };
+
+  ws.onclose = () => {
+    dot.classList.remove('on');
+    statusText.textContent = 'disconnected, retrying…';
+    setTimeout(connect, 2000);
+  };
+
+  ws.onmessage = e => {
+    const m = JSON.parse(e.data);
+
+    if (m.type === 'status') {
+      dot.classList.toggle('on', m.deviceOnline);
+      statusText.textContent = (m.deviceOnline ? 'device online' : 'device offline')
+        + ' · ' + m.users + ' user' + (m.users === 1 ? '' : 's');
+    }
+
+    if (m.type === 'depth') {
+      const secs = (m.depth * m.tickMs / 1000).toFixed(1);
+      depth.textContent = m.depth ? 'queue: ' + m.depth + ' (~' + secs + 's behind)' : 'queue: idle';
+    }
+
+    if (m.type === 'state') {
+      state.textContent = 'device state: ' + m.data;
+    }
+  };
+}
+connect();
+
+function send(text) {
+  if (ws && ws.readyState === 1) ws.send(text);
+}
+
+function clamp(el) {
+  let v = parseInt(el.value, 10);
+  if (isNaN(v)) v = 0;
+  v = Math.max(-100, Math.min(100, v));
+  el.value = v;
+  return v;
+}
+
+function sendOne(id) {
+  send(id + ' ' + clamp(document.getElementById(id)));
+}
+
+['a','b','c'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('change', () => sendOne(id));
+  el.addEventListener('keydown', e => { if (e.key === 'Enter') sendOne(id); });
+});
+
+document.getElementById('send').onclick = () => ['a','b','c'].forEach(sendOne);
+
+document.getElementById('stop').onclick = () => {
+  ['a','b','c'].forEach(id => document.getElementById(id).value = 0);
+  send('s');
+};
+</script>
+</body>
+</html>

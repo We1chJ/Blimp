@@ -9,10 +9,10 @@
 //   s         -> stop both
 //   ?         -> print current speeds
 
-const int AIN1 = D0;   // Motor A
-const int AIN2 = D1;
-const int BIN1 = D2;   // Motor B
-const int BIN2 = D3;
+const int AIN1 = D8;   // Motor A
+const int AIN2 = D7;
+const int BIN1 = D1;   // Motor B
+const int BIN2 = D0;
 
 int speedA = 0;        // -100 .. 100
 int speedB = 0;
