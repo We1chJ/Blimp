@@ -12,6 +12,11 @@
 //   s         -> stop everything
 //   ?         -> print current speeds
 
+// Command 100% drives the motors at this fraction of full power.
+// Lower it to tame an over-powered blimp without touching the UI,
+// the protocol, or anything else. 100 = full power.
+const int SPEED_SCALE = 30;   // percent
+
 const int LIN1 = D8, LIN2 = D7;   // left   (DRV8833 #1, channel A)
 const int RIN1 = D1, RIN2 = D0;   // right  (DRV8833 #1, channel B)
 const int UIN1 = D10, UIN2 = D9;   // lift   (DRV8833 #2, channel A)
@@ -20,7 +25,7 @@ int speedL = 0, speedR = 0, speedU = 0;   // -100 .. 100
 
 void setMotor(int in1, int in2, int percent) {
   percent = constrain(percent, -100, 100);
-  int pwm = map(abs(percent), 0, 100, 0, 255);
+  int pwm = map(abs(percent), 0, 100, 0, 255) * SPEED_SCALE / 100;
 
   if (percent >= 0) {          // forward
     analogWrite(in1, pwm);

@@ -28,6 +28,11 @@ const int   WS_PORT   = 443;
 const char* WS_PATH   = "/device";
 const bool  WS_SECURE = true;
 
+// Command 100% drives the motors at this fraction of full power.
+// Lower it to tame an over-powered blimp without touching the UI,
+// the protocol, or anything else. 100 = full power.
+const int SPEED_SCALE = 30;   // percent
+
 const unsigned long FAILSAFE_MS   = 2000;   // stop if the link goes quiet
 const unsigned long WIFI_CHECK_MS = 5000;   // how often to re-check WiFi
 const unsigned long WS_REVIVE_MS  = 8000;   // silent this long: force a reconnect
@@ -52,7 +57,7 @@ bool linkUp = false;
 
 void setMotor(int in1, int in2, int percent) {
   percent = constrain(percent, -100, 100);
-  int pwm = map(abs(percent), 0, 100, 0, 255);
+  int pwm = map(abs(percent), 0, 100, 0, 255) * SPEED_SCALE / 100;
 
   if (percent >= 0) {          // forward
     analogWrite(in1, pwm);

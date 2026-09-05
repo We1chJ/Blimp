@@ -260,6 +260,7 @@
 const proto = location.protocol === 'https:' ? 'wss' : 'ws';
 let ws;
 let lastMsg = null;          // last "m l r u" transmitted
+let deviceWasOnline = false;
 
 function connect() {
   ws = new WebSocket(proto + '://' + location.host + '/ui');
@@ -280,6 +281,16 @@ function connect() {
       dot.classList.toggle('on', m.deviceOnline);
       statusText.textContent = (m.deviceOnline ? 'device online' : 'device offline')
         + ' - ' + m.users + ' user' + (m.users === 1 ? '' : 's');
+
+      // The board zeroes its speeds whenever it drops, but our socket stayed
+      // up, so we still think the last command is in force and would send
+      // nothing. Re-assert whatever the sticks currently say.
+      if (m.deviceOnline && !deviceWasOnline) {
+        lastMsg = null;
+        dirty = true;
+        flush();      // now, not on the next tick: background tabs throttle timers
+      }
+      deviceWasOnline = m.deviceOnline;
     }
     if (m.type === 'depth') {
       const secs = (m.depth * m.tickMs / 1000).toFixed(1);
