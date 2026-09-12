@@ -39,6 +39,8 @@ function statusPayload() {
 // ---------- device ----------
 deviceWss.on('connection', ws => {
   console.log('device connected');
+  ws.isAlive = true;
+  ws.on('pong', () => { ws.isAlive = true; });
   cq.attach(ws);
   broadcastUi(statusPayload());
 
@@ -52,6 +54,18 @@ deviceWss.on('connection', ws => {
     broadcastUi(statusPayload());
   });
 });
+
+// A dead board (power loss, brownout) never sends a TCP FIN, so 'close'
+// above would otherwise never fire. Ping it and kill the socket if it
+// stops answering, so the UI's "online" status can't go stale.
+const HEARTBEAT_MS = 1000;
+setInterval(() => {
+  deviceWss.clients.forEach(ws => {
+    if (ws.isAlive === false) return ws.terminate();
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, HEARTBEAT_MS);
 
 // ---------- browsers ----------
 const RATE = 15, BURST = 20;
