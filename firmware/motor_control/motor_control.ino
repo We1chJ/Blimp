@@ -17,6 +17,7 @@
 // All six are claimed during setup(), so nothing else can use PWM after boot.
 
 #include <WiFi.h>
+#include <esp_system.h>
 #include <WebSocketsClient.h>
 
 // ---------- config ----------
@@ -31,7 +32,7 @@ const bool  WS_SECURE = true;
 // Command 100% drives the motors at this fraction of full power.
 // Lower it to tame an over-powered blimp without touching the UI,
 // the protocol, or anything else. 100 = full power.
-const int SPEED_SCALE = 30;   // percent
+const int SPEED_SCALE = 20;   // percent
 
 const unsigned long FAILSAFE_MS   = 2000;   // stop if the link goes quiet
 const unsigned long WIFI_CHECK_MS = 5000;   // how often to re-check WiFi
@@ -41,11 +42,11 @@ const unsigned long WS_RETRY_MS   = 15000;  // down this long: rebuild the clien
 
 // DRV8833 #1 drives the differential pair. Pins carried over from the
 // original two-motor bench sketch, so existing wiring still works.
-const int LIN1 = D8, LIN2 = D7;   // left   (DRV8833 #1, channel A)
-const int RIN1 = D1, RIN2 = D0;   // right  (DRV8833 #1, channel B)
+const int LIN1 = D1, LIN2 = D2;   // left   (DRV8833 #1, channel A)
+const int RIN1 = D3, RIN2 = D4;   // right  (DRV8833 #1, channel B)
 
 // DRV8833 #2, channel A only. Channel B is unused - leave BIN1/BIN2 open.
-const int UIN1 = D10, UIN2 = D9;  // lift   (DRV8833 #2, channel A)
+const int UIN1 = D5, UIN2 = D6;  // lift   (DRV8833 #2, channel A)
 
 int speedL = 0, speedR = 0, speedU = 0;   // -100 .. 100
 
@@ -169,6 +170,24 @@ void webSocketEvent(WStype_t type, uint8_t* payload, size_t length) {
   }
 }
 
+// Why did we just boot? A brownout here means motor current is dragging the
+// supply below the ESP32's threshold and resetting it mid-flight.
+void reportResetReason() {
+  const char* why;
+  switch (esp_reset_reason()) {
+    case ESP_RST_POWERON:  why = "power on";                       break;
+    case ESP_RST_SW:       why = "software restart";               break;
+    case ESP_RST_PANIC:    why = "crash / panic";                  break;
+    case ESP_RST_INT_WDT:  why = "interrupt watchdog";             break;
+    case ESP_RST_TASK_WDT: why = "task watchdog";                  break;
+    case ESP_RST_WDT:      why = "watchdog";                       break;
+    case ESP_RST_BROWNOUT: why = "BROWNOUT - supply sagged!";      break;
+    case ESP_RST_DEEPSLEEP:why = "deep sleep wake";                break;
+    default:               why = "unknown";                        break;
+  }
+  Serial.printf("Reset reason: %s\n", why);
+}
+
 void startWebSocket() {
   if (WS_SECURE) webSocket.beginSSL(WS_HOST, WS_PORT, WS_PATH);
   else           webSocket.begin(WS_HOST, WS_PORT, WS_PATH);
@@ -196,6 +215,8 @@ void startWifi() {
 
 void setup() {
   Serial.begin(115200);
+  delay(300);
+  reportResetReason();
 
   int pins[] = { LIN1, LIN2, RIN1, RIN2, UIN1, UIN2 };
   for (int i = 0; i < 6; i++) pinMode(pins[i], OUTPUT);
@@ -220,6 +241,8 @@ void setup() {
   lastLinkOk = millis();
 
   Serial.println("Blimp ready. Type: l 75 | r -30 | u 50 | m 60 -60 20 | 40 | s | ?");
+  pinMode(D10, OUTPUT);
+  digitalWrite(D10, HIGH);
 }
 
 void loop() {
