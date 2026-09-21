@@ -3,6 +3,7 @@ const http = require('http');
 const path = require('path');
 const { WebSocketServer } = require('ws');
 const { CommandQueue, TICK_MS } = require('./queue');
+const { FlightQueue } = require('./flightQueue');
 
 const app = express();
 app.use(express.static(path.join(__dirname, 'public')));
@@ -27,6 +28,19 @@ function broadcastUi(obj) {
 const cq = new CommandQueue(depth => {
   broadcastUi({ type: 'depth', depth, tickMs: TICK_MS });
 });
+
+function broadcastQueue() {
+  uiWss.clients.forEach(ws => {
+    if (ws.readyState !== 1) return;
+    const { queue, you } = fq.snapshotFor(ws);
+    ws.send(JSON.stringify(queue));
+    ws.send(JSON.stringify(you));
+  });
+}
+
+const fq = new FlightQueue(broadcastQueue);
+setInterval(() => fq.tick(), 250);
+setInterval(broadcastQueue, 1000);
 
 function statusPayload() {
   return {
@@ -83,10 +97,51 @@ uiWss.on('connection', ws => {
   ws.send(JSON.stringify(statusPayload()));
   broadcastUi(statusPayload());
 
+  const { queue, you } = fq.snapshotFor(ws);
+  ws.send(JSON.stringify(queue));
+  ws.send(JSON.stringify(you));
+
   ws.on('message', raw => {
+    const text = raw.toString();
+
+    let msg = null;
+    try { msg = JSON.parse(text); } catch (e) { /* not JSON: a raw motor/stop command */ }
+
+    if (msg && typeof msg.type === 'string') {
+      switch (msg.type) {
+        case 'join':
+          fq.join(ws, msg.username);
+          return;
+        case 'leave':
+          fq.leave(ws);
+          return;
+        case 'adminLogin': {
+          const ok = fq.adminLogin(ws, msg.password);
+          ws.send(JSON.stringify({ type: 'adminAuth', ok }));
+          if (ok) broadcastQueue();
+          return;
+        }
+        case 'adminRemove':
+          fq.adminRemove(ws, msg.id);
+          return;
+        case 'adminTakeControl':
+          fq.adminTakeControl(ws);
+          return;
+        case 'adminRelease':
+          fq.adminReleaseControl(ws);
+          return;
+        default:
+          return;
+      }
+    }
+
+    // Legacy raw commands drive the motors directly: only the active pilot
+    // (or the admin while overriding) may reach this, no matter what any
+    // client's UI shows.
+    if (!fq.isAuthorized(ws)) return;
     if (!allow(ws)) return;
 
-    const cmd = raw.toString().trim().toLowerCase();
+    const cmd = text.trim().toLowerCase();
 
     if (cmd === 's' || cmd === 'stop') {
       cq.urgent('s');
@@ -108,7 +163,10 @@ uiWss.on('connection', ws => {
     }
   });
 
-  ws.on('close', () => broadcastUi(statusPayload()));
+  ws.on('close', () => {
+    fq.handleDisconnect(ws);
+    broadcastUi(statusPayload());
+  });
 });
 
 const PORT = process.env.PORT || 3000;
