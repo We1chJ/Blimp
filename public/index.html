@@ -3,17 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>Blimp control</title>
+<title>Olin's Community Blimp</title>
 <style>
   :root {
-    --bg:     #05080a;
-    --panel:  #0a1013;
-    --panel2: #0e161a;
-    --line:   #1d2f33;
-    --amber:  #ffb000;
-    --green:  #3ef08a;
-    --dim:    #5d7d80;
-    --danger: #ff3b30;
+    --canvas:        #f6f8fa;
+    --surface:       #ffffff;
+    --surface-muted: #f6f8fa;
+    --border:        #d1d9e0;
+    --border-strong: rgba(31,35,40,.15);
+    --fg:            #1f2328;
+    --fg-muted:      #59636e;
+    --accent:        #0969da;
+    --success:       #1f883d;
+    --danger:        #cf222e;
+    --radius:        6px;
   }
 
   * { box-sizing: border-box; }
@@ -21,190 +24,214 @@
 
   body {
     margin: 0;
-    padding: 16px 14px 28px;
-    background: var(--bg);
-    color: var(--green);
-    font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    min-height: 100vh;
-    -webkit-user-select: none; user-select: none;
+    padding: 28px 16px 48px;
+    background: var(--canvas);
+    color: var(--fg);
+    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
   }
-  /* phosphor scanlines */
-  body::after {
-    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 99;
-    background: repeating-linear-gradient(0deg, rgba(62,240,138,.035) 0 1px, transparent 1px 3px);
-  }
 
-  .wrap { max-width: 348px; margin: 0 auto; }
+  .wrap { max-width: 420px; margin: 0 auto; }
 
-  /* ---------- header ---------- */
-  .hdr {
-    display: flex; justify-content: space-between; align-items: center;
-    border: 1px solid var(--line); background: var(--panel);
-    padding: 8px 10px; margin-bottom: 10px;
+  /* ---------- masthead ---------- */
+  h1 {
+    margin: 0 0 6px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -.01em;
   }
-  .hdr .t { font-size: 11px; font-weight: 700; letter-spacing: .22em; color: var(--amber); }
-  .hdr .s { font-size: 10px; letter-spacing: .08em; color: var(--dim); }
+  .site-status {
+    margin: 0 0 16px;
+    font-size: 12px;
+    color: var(--fg-muted);
+  }
   .dot {
-    display: inline-block; width: 7px; height: 7px; border-radius: 50%;
-    background: #2a4a44; margin-right: 6px; vertical-align: middle;
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: #8c959f; margin-right: 6px; vertical-align: middle;
   }
-  .dot.on { background: var(--green); box-shadow: 0 0 8px rgba(62,240,138,.6); }
+  .dot.on { background: #2da44e; }
 
   /* ---------- how it works ---------- */
-  .howto { border: 1px solid var(--line); background: var(--panel); margin-bottom: 10px; }
+  .howto {
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
   .howto summary {
-    display: flex; justify-content: space-between; align-items: center; gap: 10px;
-    padding: 10px 11px; cursor: pointer; list-style: none;
-    font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--green);
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 12px 16px; cursor: pointer; list-style: none;
+    font-size: 14px; font-weight: 600; color: var(--accent);
   }
   .howto summary::-webkit-details-marker { display: none; }
-  .howto summary::after { content: '[ + ]'; color: var(--dim); }
-  .howto[open] summary::after { content: '[ \2212 ]'; }
-  .howto ol {
-    margin: 0; padding: 10px 12px 12px; list-style: none; border-top: 1px solid var(--line);
+  .howto summary::after { content: '+'; color: var(--fg-muted); font-size: 16px; font-weight: 400; }
+  .howto[open] summary::after { content: '\2212'; }
+  .howto ul {
+    margin: 0; padding: 14px 16px 16px 32px;
+    border-top: 1px solid var(--border);
   }
-  .howto li {
-    position: relative; margin-top: 8px; padding-left: 15px;
-    font-size: 11px; line-height: 1.65; letter-spacing: .03em; color: var(--dim);
-  }
-  .howto li:first-child { margin-top: 0; }
-  .howto li::before { content: '>'; position: absolute; left: 0; color: var(--amber); }
-  .howto b { color: var(--green); font-weight: 600; }
+  .howto li { margin-bottom: 8px; color: var(--fg-muted); }
+  .howto li:last-child { margin-bottom: 0; }
+  .howto b { color: var(--fg); font-weight: 600; }
 
-  /* ---------- panels ---------- */
+  /* ---------- boxes ---------- */
   .box {
-    position: relative; border: 1px solid var(--line); background: var(--panel);
-    padding: 12px; margin-bottom: 10px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    overflow: hidden;
   }
-  .box::before, .box::after {
-    content: ''; position: absolute; width: 7px; height: 7px;
+  .cap {
+    margin: 0; padding: 10px 16px;
+    background: var(--surface-muted);
+    border-bottom: 1px solid var(--border);
+    font-size: 13px; font-weight: 600;
   }
-  .box::before { top: -1px; left: -1px; border-top: 1px solid var(--amber); border-left: 1px solid var(--amber); }
-  .box::after { bottom: -1px; right: -1px; border-bottom: 1px solid var(--amber); border-right: 1px solid var(--amber); }
-  .cap { font-size: 9px; letter-spacing: .24em; color: var(--dim); margin: 0 0 10px; }
+  .box-body { padding: 16px; }
 
-  /* ---------- active pilot ---------- */
+  /* ---------- now flying ---------- */
   .now-flying {
-    display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
-    font-size: 19px; letter-spacing: .06em; color: var(--amber);
-    text-shadow: 0 0 12px rgba(255,176,0,.3);
+    display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+    font-size: 20px; font-weight: 600; letter-spacing: -.01em;
   }
   .now-flying .time {
-    font-size: 21px; color: var(--green); font-variant-numeric: tabular-nums;
-    text-shadow: 0 0 12px rgba(62,240,138,.3); white-space: nowrap;
+    font-size: 20px; color: var(--fg-muted); font-weight: 500;
+    font-variant-numeric: tabular-nums; white-space: nowrap;
   }
-  .now-flying.empty { font-size: 12px; letter-spacing: .18em; color: var(--dim); text-shadow: none; }
+  .now-flying.empty { font-size: 15px; font-weight: 400; color: var(--fg-muted); }
 
-  .seg { display: flex; gap: 2px; margin-top: 10px; }
-  .seg i { flex: 1; height: 7px; background: #12201f; border: 1px solid #1b2c2b; }
-  .seg i.on { background: var(--green); border-color: var(--green); box-shadow: 0 0 6px rgba(62,240,138,.45); }
-  .seg i.warn { background: var(--amber); border-color: var(--amber); box-shadow: 0 0 6px rgba(255,176,0,.45); }
-  .seg.paused i.on, .seg.paused i.warn { opacity: .4; box-shadow: none; }
+  .progress {
+    height: 6px; margin-top: 12px; border-radius: 99px;
+    background: #eaeef2; overflow: hidden;
+  }
+  .progress i {
+    display: block; height: 100%; width: 0; border-radius: 99px;
+    background: var(--success); transition: width .35s linear;
+  }
+  .progress.low i { background: #bf8700; }
+  .progress.paused i { background: #8c959f; }
 
-  /* ---------- queue ---------- */
+  /* ---------- queue list ---------- */
   .qhead {
-    display: grid; grid-template-columns: 26px 1fr 54px; gap: 8px;
-    font-size: 9px; letter-spacing: .18em; color: var(--dim);
-    margin-top: 13px; padding-bottom: 5px; border-bottom: 1px solid var(--line);
+    display: grid; grid-template-columns: 24px 1fr 64px; gap: 10px;
+    margin-top: 18px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
+    font-size: 12px; font-weight: 600; color: var(--fg-muted);
   }
   .qhead span:last-child { text-align: right; }
 
   .up-next { list-style: none; margin: 0; padding: 0; }
   .up-next li {
-    display: grid; grid-template-columns: 26px 1fr 54px; gap: 8px; align-items: center;
-    padding: 6px 0; border-bottom: 1px dotted #16262a; font-size: 13px; letter-spacing: .04em;
+    display: grid; grid-template-columns: 24px 1fr 64px; gap: 10px; align-items: center;
+    padding: 9px 0; border-bottom: 1px solid var(--border);
   }
   .up-next li:last-child { border-bottom: none; }
-  .up-next .pos { font-size: 11px; color: var(--dim); }
-  .up-next .nm { color: var(--green); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .up-next .eta { text-align: right; font-size: 12px; color: var(--dim); font-variant-numeric: tabular-nums; }
+  .up-next .pos { color: var(--fg-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .up-next .nm { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .up-next .eta { text-align: right; font-size: 13px; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
   .up-next li.empty {
-    display: block; padding: 9px 0; font-size: 10px; letter-spacing: .18em; color: #3c5a5c; border-bottom: none;
+    display: block; padding: 12px 0 2px; color: var(--fg-muted); font-size: 13px; border-bottom: none;
   }
 
-  /* ---------- your status ---------- */
-  .you-row { display: flex; gap: 8px; margin-top: 12px; }
-  .you-row input {
-    flex: 1; min-width: 0; padding: 9px 10px;
-    background: #060d10; border: 1px solid var(--line); color: var(--green);
-    font: 13px ui-monospace, Menlo, monospace; letter-spacing: .06em;
-  }
-  .you-row input::placeholder { color: #3c5a5c; letter-spacing: .14em; text-transform: uppercase; font-size: 11px; }
-  .you-row input:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 1px rgba(62,240,138,.2); }
-
-  .you-row button, .you-status button, .admin-login button, .admin-control button {
-    padding: 9px 13px; background: transparent; border: 1px solid var(--line); color: var(--green);
-    font: 11px ui-monospace, Menlo, monospace; letter-spacing: .16em; text-transform: uppercase; cursor: pointer;
+  /* ---------- controls: buttons + inputs ---------- */
+  .btn, .you-row button, .you-status button, .admin-login button, .admin-control button, #send {
+    padding: 6px 14px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius);
+    background: var(--surface-muted);
+    color: var(--fg);
+    font: 500 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    cursor: pointer;
     white-space: nowrap;
   }
+  .btn:hover, .you-row button:hover, .you-status button:hover { background: #eef1f4; }
   .you-row button.primary {
-    background: var(--green); border-color: var(--green); color: #05100c; font-weight: 700;
-    box-shadow: 0 0 14px rgba(62,240,138,.25);
+    background: var(--success); border-color: var(--border-strong); color: #fff; font-weight: 600;
   }
+  .you-row button.primary:hover { background: #1a7f37; }
+
+  input[type="text"], input[type="password"], input[type="number"] {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+    color: var(--fg);
+    font: 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  input:focus {
+    outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(9,105,218,.25);
+  }
+
+  .you-row { display: flex; gap: 8px; margin-top: 16px; }
+  .you-row input { flex: 1; min-width: 0; }
   .you-status {
-    display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 11px;
-    font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--dim);
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    margin-top: 16px; font-size: 14px; color: var(--fg-muted);
   }
-  .you-status .msg b { color: var(--amber); font-weight: 700; }
-  .you-status.flying .msg b { color: var(--green); }
+  .you-status .msg b { color: var(--fg); font-weight: 600; }
+  .you-status.flying .msg b { color: var(--success); }
 
   .admin-flying-note {
-    margin-top: 9px; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--amber);
+    margin-top: 12px; padding: 8px 12px;
+    border: 1px solid #f0d3a0; border-radius: var(--radius); background: #fff8e6;
+    font-size: 13px; color: #7d4e00;
   }
 
   /* ---------- sticks ---------- */
   .sticks-note {
-    text-align: center; margin: 0 0 8px;
-    font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--dim);
+    margin: 0 0 10px; text-align: center; font-size: 13px; color: var(--fg-muted);
   }
-  .sticks { display: flex; gap: 8px; justify-content: center; align-items: flex-start; flex-wrap: wrap; }
+  .sticks {
+    display: flex; gap: 12px; justify-content: center; align-items: flex-start; flex-wrap: wrap;
+    -webkit-user-select: none; user-select: none;
+  }
   .stick-box {
-    border: 1px solid var(--line); background: var(--panel); padding: 10px;
-    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 14px;
+    border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface);
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
   }
-  .stick-label { font-size: 9px; letter-spacing: .22em; color: var(--dim); }
+  .stick-label { font-size: 12px; font-weight: 600; color: var(--fg-muted); }
 
   .pad {
-    position: relative; border: 1px solid var(--line);
-    background: radial-gradient(circle at 50% 50%, #0b1518 0%, #060c0e 70%);
+    position: relative;
+    background: var(--surface-muted);
+    border: 1px solid var(--border);
     touch-action: none; cursor: grab; overflow: hidden;
   }
   .pad:active { cursor: grabbing; }
   #padDrive { width: 168px; height: 168px; border-radius: 50%; }
-  #padLift  { width: 70px;  height: 168px; border-radius: 3px; }
+  #padLift  { width: 72px;  height: 168px; border-radius: var(--radius); }
 
-  .pad .ring, .pad .ring2 { position: absolute; border: 1px solid #17282b; border-radius: 50%; pointer-events: none; }
+  .pad .ring, .pad .ring2 { position: absolute; border: 1px solid #e4e8ec; border-radius: 50%; pointer-events: none; }
   .pad .ring  { inset: 16%; }
   .pad .ring2 { inset: 33%; }
-  .pad .guide { position: absolute; background: #17282b; pointer-events: none; }
-  .guide.h { left: 6%; right: 6%; top: 50%; height: 1px; }
-  .guide.v { top: 6%; bottom: 6%; left: 50%; width: 1px; }
+  .pad .guide { position: absolute; background: #e4e8ec; pointer-events: none; }
+  .guide.h { left: 8%; right: 8%; top: 50%; height: 1px; }
+  .guide.v { top: 8%; bottom: 8%; left: 50%; width: 1px; }
 
   .knob {
     position: absolute; left: 50%; top: 50%;
-    width: 52px; height: 52px; margin: -26px 0 0 -26px; border-radius: 50%;
-    background: rgba(62,240,138,.06); border: 1px solid #2c5a4c;
-    box-shadow: inset 0 0 12px rgba(62,240,138,.08); pointer-events: none;
+    width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%;
+    background: var(--surface); border: 1px solid #c2c9d1;
+    box-shadow: 0 1px 3px rgba(31,35,40,.16); pointer-events: none;
   }
   .knob::after {
     content: ''; position: absolute; left: 50%; top: 50%;
-    width: 5px; height: 5px; margin: -2.5px 0 0 -2.5px; background: #2c5a4c;
+    width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; background: #8c959f;
   }
-  #padLift .knob { width: 54px; height: 32px; margin: -16px 0 0 -27px; border-radius: 2px; }
-  .pad.live .knob {
-    border-color: var(--green);
-    box-shadow: 0 0 14px rgba(62,240,138,.3), inset 0 0 12px rgba(62,240,138,.12);
-  }
-  .pad.live .knob::after { background: var(--green); }
+  #padLift .knob { width: 56px; height: 34px; margin: -17px 0 0 -28px; border-radius: 17px; }
+  .pad.live .knob { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(9,105,218,.18); }
+  .pad.live .knob::after { background: var(--accent); }
 
-  .readout { font-size: 11px; letter-spacing: .08em; color: var(--dim); white-space: pre; }
-  .readout b { color: var(--green); font-weight: 600; }
-  .hint { font-size: 9px; letter-spacing: .18em; color: #33504f; }
+  .readout { font-size: 13px; color: var(--fg-muted); font-variant-numeric: tabular-nums; white-space: pre; }
+  .readout b { color: var(--fg); font-weight: 600; }
+  .hint { font-size: 11px; color: #8c959f; }
 
   /* ---------- lock / admin override ---------- */
-  .sticks.locked, .manual.locked, #stop.locked { opacity: .35; pointer-events: none; }
-
+  .sticks.locked, .manual.locked, #stop.locked { opacity: .45; pointer-events: none; }
   .sticks-wrap { position: relative; }
   .sticks.admin-flying { pointer-events: none; }
 
@@ -216,132 +243,125 @@
     animation: adminVeil 1.9s ease-in-out infinite;
   }
   .admin-overlay text {
-    font: 800 60px/1 ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
-    letter-spacing: -1px;
+    font: 700 54px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    letter-spacing: -1.5px;
   }
-  @keyframes adminVeil { 0%, 100% { opacity: .8; } 50% { opacity: 0; } }
-
-  @media (max-width: 340px) {
-    .admin-overlay text { font-size: 52px; }
-  }
+  @keyframes adminVeil { 0%, 100% { opacity: .88; } 50% { opacity: 0; } }
 
   /* ---------- emergency stop ---------- */
   #stop {
-    display: block; width: 100%; max-width: 348px; margin: 10px auto 0; padding: 15px; cursor: pointer;
-    background: repeating-linear-gradient(135deg, rgba(255,59,48,.14) 0 9px, rgba(255,59,48,.05) 9px 18px);
-    border: 1px solid var(--danger); color: #ff6b62;
-    font: 700 13px ui-monospace, Menlo, monospace; letter-spacing: .22em; text-transform: uppercase;
-    text-shadow: 0 0 10px rgba(255,59,48,.4);
+    display: block; width: 100%; margin: 16px 0 0; padding: 12px;
+    border: 1px solid var(--border-strong); border-radius: var(--radius);
+    background: var(--danger); color: #fff;
+    font: 600 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    cursor: pointer;
   }
-  #stop:active { background: rgba(255,59,48,.25); }
+  #stop:hover { background: #a40e26; }
 
   /* ---------- telemetry ---------- */
   .status {
-    max-width: 348px; margin: 10px auto 0; padding: 8px 10px;
-    border: 1px solid var(--line); background: var(--panel);
-    display: grid; gap: 3px; font-size: 10px; letter-spacing: .1em; color: var(--dim);
+    margin-top: 16px; padding: 12px 16px;
+    border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface);
+    display: grid; gap: 4px;
+    font: 12px ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+    color: var(--fg-muted);
   }
 
   /* ---------- admin ---------- */
   .admin-toggle {
-    display: block; margin: 16px auto 0; padding: 6px 12px;
-    background: transparent; border: 1px solid var(--line); color: var(--dim);
-    font: 10px ui-monospace, Menlo, monospace; letter-spacing: .2em; text-transform: uppercase; cursor: pointer;
+    display: block; margin: 20px auto 0; padding: 5px 12px;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    background: transparent; color: var(--fg-muted);
+    font: 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    cursor: pointer;
   }
+  .admin-toggle:hover { background: var(--surface); }
+
   .admin-panel {
-    position: relative; max-width: 348px; margin: 10px auto 0; padding: 12px;
-    border: 1px solid #3a2f14; background: var(--panel);
+    margin: 12px 0 0;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--surface); overflow: hidden;
   }
   .admin-panel h2 {
-    margin: 0 0 10px; font-size: 9px; font-weight: 400; letter-spacing: .24em; color: var(--amber);
+    margin: 0; padding: 10px 16px;
+    background: var(--surface-muted); border-bottom: 1px solid var(--border);
+    font-size: 13px; font-weight: 600;
   }
-  .admin-login { display: flex; gap: 8px; }
-  .admin-login input {
-    flex: 1; min-width: 0; padding: 9px 10px;
-    background: #060d10; border: 1px solid var(--line); color: var(--green);
-    font: 13px ui-monospace, Menlo, monospace; letter-spacing: .2em;
-  }
-  .admin-login input:focus { outline: none; border-color: var(--amber); }
-  .admin-error {
-    margin-top: 8px; font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: var(--danger);
-  }
+  .admin-login { display: flex; gap: 8px; padding: 16px; }
+  .admin-login input { flex: 1; min-width: 0; }
+  .admin-error { margin: 0 16px 16px; font-size: 13px; color: var(--danger); }
 
   .admin-list { list-style: none; margin: 0; padding: 0; }
   .admin-list li {
-    display: flex; justify-content: space-between; align-items: center; gap: 10px;
-    padding: 7px 0; border-bottom: 1px dotted #16262a; font-size: 12px; letter-spacing: .06em;
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 14px;
   }
-  .admin-list li:last-child { border-bottom: none; }
   .admin-list .remove {
-    padding: 4px 9px; background: transparent; border: 1px solid #5c2420; color: var(--danger);
-    font: 9px ui-monospace, Menlo, monospace; letter-spacing: .16em; text-transform: uppercase; cursor: pointer;
+    padding: 3px 10px;
+    border: 1px solid rgba(207,34,46,.3); border-radius: var(--radius);
+    background: var(--surface); color: var(--danger);
+    font: 500 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    cursor: pointer;
   }
-  .admin-control { margin-top: 11px; }
-  .admin-control button.taking {
-    border-color: var(--danger); color: var(--danger);
-    background: repeating-linear-gradient(135deg, rgba(255,59,48,.14) 0 9px, rgba(255,59,48,.05) 9px 18px);
-  }
+  .admin-list .remove:hover { background: var(--danger); color: #fff; }
+  .admin-control { padding: 16px; }
+  .admin-control button.taking { background: var(--danger); color: #fff; border-color: var(--border-strong); }
 
-  .manual { margin-top: 11px; padding-top: 11px; border-top: 1px solid var(--line); }
-  .manual h2 { margin: 0 0 9px; font-size: 9px; font-weight: 400; letter-spacing: .24em; color: var(--dim); }
-  .mrow { display: flex; align-items: center; gap: 9px; margin-bottom: 7px; }
-  .mrow label { width: 46px; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
-  .mrow input {
-    flex: 1; min-width: 0; padding: 7px 9px;
-    background: #060d10; border: 1px solid var(--line); color: var(--green);
-    font: 12px ui-monospace, Menlo, monospace;
+  .manual { padding: 0 16px 16px; }
+  .manual h2 {
+    margin: 0 0 12px; padding: 0; background: none; border: none;
+    font-size: 12px; font-weight: 600; color: var(--fg-muted);
   }
-  .mrow input:focus { outline: none; border-color: var(--green); }
-  #send {
-    width: 100%; margin-top: 4px; padding: 9px; background: transparent;
-    border: 1px solid var(--line); color: var(--green);
-    font: 10px ui-monospace, Menlo, monospace; letter-spacing: .18em; text-transform: uppercase; cursor: pointer;
-  }
+  .mrow { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .mrow label { width: 52px; font-size: 13px; color: var(--fg-muted); }
+  .mrow input { flex: 1; min-width: 0; }
+  #send { width: 100%; margin-top: 4px; }
 
-  @media (max-width: 340px) {
+  @media (max-width: 360px) {
     #padDrive { width: 150px; height: 150px; }
-    #padLift  { width: 62px;  height: 150px; }
-    #padLift .knob { width: 48px; height: 28px; margin: -14px 0 0 -24px; }
+    #padLift  { width: 64px;  height: 150px; }
+    #padLift .knob { width: 50px; height: 30px; margin: -15px 0 0 -25px; }
+    .admin-overlay text { font-size: 46px; }
   }
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <div class="hdr">
-    <span class="t">BLIMP // CTRL</span>
-    <span class="s"><span class="dot" id="dot"></span><span id="statusText">CONNECTING</span></span>
-  </div>
+  <h1>Olin's Community Blimp</h1>
+  <p class="site-status"><span class="dot" id="dot"></span><span id="statusText">Connecting…</span></p>
 
   <details class="howto">
     <summary>Join the queue to fly the blimp</summary>
-    <ol>
+    <ul>
       <li>When nobody is queued, the blimp idles or an admin flies it.</li>
-      <li>Join the queue with a callsign and wait your turn.</li>
+      <li>Enter your name, join the queue, and wait your turn.</li>
       <li><b>Keep this page open</b> on your phone &mdash; close it and you lose your spot.</li>
       <li>When it is your turn you get <b>90 seconds</b> of flying time.</li>
       <li>An admin can take control at any time, so fly responsibly.</li>
-    </ol>
+    </ul>
   </details>
 
   <div class="box">
-    <p class="cap">ACTIVE PILOT</p>
-    <div class="now-flying empty" id="nowFlying">NO PILOT ABOARD</div>
-    <div class="seg" id="seg"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <p class="cap">Now flying</p>
+    <div class="box-body">
+    <div class="now-flying empty" id="nowFlying">Nobody flying</div>
+    <div class="progress" id="seg"><i></i></div>
     <div class="admin-flying-note" id="adminFlyingNote" hidden>Admin has taken control</div>
 
-    <div class="qhead"><span>#</span><span>CALLSIGN</span><span>ETA</span></div>
+    <div class="qhead"><span>#</span><span>Up next</span><span>Starts in</span></div>
     <ul class="up-next" id="upNext"></ul>
 
     <div class="you-row" id="joinRow">
-      <input id="usernameInput" type="text" maxlength="24" placeholder="Callsign">
-      <button class="primary" id="joinBtn">Join</button>
+      <input id="usernameInput" type="text" maxlength="24" placeholder="Your name">
+      <button class="primary" id="joinBtn">Join queue</button>
     </div>
     <div class="you-status" id="youStatus" hidden>
       <span class="msg" id="youMsg"></span>
-      <button id="leaveBtn">Abort</button>
+      <button id="leaveBtn">Leave</button>
     </div>
     <div class="admin-flying-note" id="removedNote" hidden>You were removed by the admin</div>
+    </div>
   </div>
 
   <div class="sticks-note" id="sticksNote" hidden>Spectating &mdash; join the queue to fly</div>
@@ -349,7 +369,7 @@
   <div class="sticks-wrap">
   <div class="sticks" id="sticks">
     <div class="stick-box">
-      <div class="stick-label">DRIVE</div>
+      <div class="stick-label">Drive</div>
       <div class="pad" id="padDrive">
         <div class="guide h"></div>
         <div class="guide v"></div>
@@ -362,7 +382,7 @@
     </div>
 
     <div class="stick-box">
-      <div class="stick-label">ALT</div>
+      <div class="stick-label">Altitude</div>
       <div class="pad" id="padLift">
         <div class="guide h"></div>
         <div class="knob" id="knobLift"></div>
@@ -388,30 +408,30 @@
   <button id="stop">Emergency stop</button>
 
   <div class="status">
-    <div id="depth">CMD QUEUE IDLE</div>
-    <div id="state">TLM &mdash;</div>
+    <div id="depth">Command queue: idle</div>
+    <div id="state">Device state: &mdash;</div>
   </div>
 
   <button class="admin-toggle" id="adminToggle">Admin</button>
 
   <div class="admin-panel" id="adminLoginPanel" hidden>
-    <h2>ADMIN LOGIN</h2>
+    <h2>Admin login</h2>
     <div class="admin-login">
-      <input id="adminPassword" type="password" placeholder="PASSWORD">
-      <button id="adminLoginBtn">Enter</button>
+      <input id="adminPassword" type="password" placeholder="Password">
+      <button id="adminLoginBtn">Log in</button>
     </div>
     <div class="admin-error" id="adminError" hidden>Wrong password</div>
   </div>
 
   <div class="admin-panel" id="adminPanel" hidden>
-    <h2>ADMIN</h2>
+    <h2>Admin</h2>
     <ul class="admin-list" id="adminList"></ul>
     <div class="admin-control">
       <button id="adminControlBtn">Take control</button>
     </div>
 
     <div class="manual" id="manual">
-      <h2>MANUAL VOLTAGE</h2>
+      <h2>Manual voltage</h2>
       <div class="mrow"><label>Left</label><input id="l" type="number" min="-100" max="100" value="0"></div>
       <div class="mrow"><label>Right</label><input id="r" type="number" min="-100" max="100" value="0"></div>
       <div class="mrow"><label>Lift</label><input id="u" type="number" min="-100" max="100" value="0"></div>
@@ -431,12 +451,12 @@ let deviceWasOnline = false;
 function connect() {
   ws = new WebSocket(proto + '://' + location.host + '/ui');
 
-  ws.onopen = () => { statusText.textContent = 'LINK UP'; };
+  ws.onopen = () => { statusText.textContent = 'Connected'; };
 
   ws.onclose = () => {
     lastMsg = null;                       // board zeroes on drop, so resend
     dot.classList.remove('on');
-    statusText.textContent = 'LINK LOST // RETRY';
+    statusText.textContent = 'Disconnected \u2014 reconnecting\u2026';
     setTimeout(connect, 2000);
   };
 
@@ -445,7 +465,8 @@ function connect() {
 
     if (m.type === 'status') {
       dot.classList.toggle('on', m.deviceOnline);
-      statusText.textContent = (m.deviceOnline ? 'LINK OK' : 'NO LINK') + ' \u00b7 ' + m.users + ' OBS';
+      statusText.textContent = (m.deviceOnline ? 'Blimp online' : 'Blimp offline')
+        + ' \u00b7 ' + m.users + (m.users === 1 ? ' person here' : ' people here');
 
       // The board zeroes its speeds whenever it drops, but our socket stayed
       // up, so we still think the last command is in force and would send
@@ -459,10 +480,10 @@ function connect() {
     }
     if (m.type === 'depth') {
       const secs = (m.depth * m.tickMs / 1000).toFixed(1);
-      depth.textContent = m.depth ? 'CMD QUEUE ' + m.depth + ' (~' + secs + 'S BEHIND)' : 'CMD QUEUE IDLE';
+      depth.textContent = m.depth ? 'Command queue: ' + m.depth + ' (~' + secs + 's behind)' : 'Command queue: idle';
     }
     if (m.type === 'state') {
-      state.textContent = 'TLM ' + m.data;
+      state.textContent = 'Device state: ' + m.data;
     }
     if (m.type === 'queue') {
       latestQueue = m;
@@ -503,16 +524,13 @@ function fmtTime(ms) {
   return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
 }
 
-// Countdown as a 12-segment bar; the last quarter runs amber.
-function renderSegments() {
+// Countdown as a progress bar; the last quarter runs amber.
+function renderProgress() {
   const c = latestQueue.current;
-  const lit = c ? Math.ceil(c.msLeft / latestQueue.turnMs * seg.children.length) : 0;
-  const warn = lit <= 3;
+  const pct = c ? Math.max(0, Math.min(100, c.msLeft / latestQueue.turnMs * 100)) : 0;
+  seg.firstElementChild.style.width = pct + '%';
+  seg.classList.toggle('low', !!c && pct <= 25);
   seg.classList.toggle('paused', !!(c && c.paused));
-  for (let i = 0; i < seg.children.length; i++) {
-    const on = i < lit;
-    seg.children[i].className = on ? (warn ? 'warn' : 'on') : '';
-  }
 }
 
 function renderQueue() {
@@ -521,32 +539,32 @@ function renderQueue() {
   nowFlying.textContent = '';
   if (q.current) {
     const name = document.createElement('span');
-    name.textContent = q.current.username.toUpperCase();
+    name.textContent = q.current.username;
     const time = document.createElement('span');
     time.className = 'time';
-    time.textContent = (q.current.paused ? 'HELD ' : '') + fmtTime(q.current.msLeft);
+    time.textContent = (q.current.paused ? 'Paused \u00b7 ' : '') + fmtTime(q.current.msLeft);
     nowFlying.append(name, time);
   } else {
-    nowFlying.textContent = 'NO PILOT ABOARD';
+    nowFlying.textContent = 'Nobody flying';
   }
   adminFlyingNote.hidden = !q.adminFlying;
-  renderSegments();
+  renderProgress();
 
   upNext.innerHTML = '';
   if (!q.waiting.length) {
     const li = document.createElement('li');
     li.className = 'empty';
-    li.textContent = 'NO PILOTS IN SEQUENCE';
+    li.textContent = 'Nobody waiting \u2014 join to fly now';
     upNext.appendChild(li);
   } else {
     q.waiting.forEach((e, i) => {
       const li = document.createElement('li');
       const pos = document.createElement('span');
       pos.className = 'pos';
-      pos.textContent = String(i + 1).padStart(2, '0');
+      pos.textContent = i + 1;
       const nm = document.createElement('span');
       nm.className = 'nm';
-      nm.textContent = e.username.toUpperCase();
+      nm.textContent = e.username;
       const eta = document.createElement('span');
       eta.className = 'eta';
       eta.textContent = '~' + fmtTime(e.msLeft);
