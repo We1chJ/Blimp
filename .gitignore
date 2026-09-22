@@ -1,1 +1,7 @@
 node_modules/
+
+# secrets - Stripe keys and the admin password live here
+.env
+
+.DS_Store
+install.log
