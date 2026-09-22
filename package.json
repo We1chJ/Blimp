@@ -3,10 +3,11 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node --env-file-if-exists=.env server.js"
   },
   "dependencies": {
     "express": "^4.19.2",
+    "stripe": "^22.6.2",
     "ws": "^8.17.0"
   }
 }

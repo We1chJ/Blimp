@@ -4,9 +4,61 @@ const path = require('path');
 const { WebSocketServer } = require('ws');
 const { CommandQueue, TICK_MS } = require('./queue');
 const { FlightQueue } = require('./flightQueue');
+const Stripe = require('stripe');
 
 const app = express();
-app.use(express.static(path.join(__dirname, 'public')));
+
+// Donations. Both keys have to be present or the button stays hidden, so the
+// blimp still runs for anyone who clones this without a Stripe account.
+const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
+const PUBLISHABLE_KEY = process.env.STRIPE_PUBLISHABLE_KEY || '';
+const DONATION_MIN = 100;      // $1
+const DONATION_MAX = 50000;    // $500
+
+app.use(express.json({ limit: '4kb' }));
+// express skips dot-prefixed paths by default, which would 404 anything under
+// /.well-known - ACME challenges, and the Apple Pay association file if Stripe
+// ever falls back to asking us to host it.
+app.use(express.static(path.join(__dirname, 'public'), { dotfiles: 'allow' }));
+
+app.get('/api/donate/config', (req, res) => {
+  res.json({
+    enabled: Boolean(stripe && PUBLISHABLE_KEY),
+    publishableKey: PUBLISHABLE_KEY,
+    min: DONATION_MIN,
+    max: DONATION_MAX,
+  });
+});
+
+// The amount is whatever the page asked for - it is the donor's own money, so
+// the only thing worth enforcing is that it is a sane number of cents.
+app.post('/api/donate/intent', async (req, res) => {
+  if (!stripe) return res.status(503).json({ error: 'Donations are not set up yet.' });
+
+  const amount = Math.round(Number(req.body && req.body.amount));
+  if (!Number.isFinite(amount) || amount < DONATION_MIN || amount > DONATION_MAX) {
+    return res.status(400).json({ error: 'Pick an amount between $1 and $500.' });
+  }
+
+  // the wallet supplies this; Stripe mails the receipt to it
+  const email = typeof req.body.email === 'string' && req.body.email.includes('@')
+    ? req.body.email.slice(0, 254)
+    : undefined;
+
+  try {
+    const intent = await stripe.paymentIntents.create({
+      amount,
+      currency: 'usd',
+      description: 'Donation to flyolin.lol',
+      receipt_email: email,
+      automatic_payment_methods: { enabled: true },
+    });
+    res.json({ clientSecret: intent.client_secret });
+  } catch (err) {
+    console.error('stripe: ' + err.message);
+    res.status(502).json({ error: 'Could not reach Stripe. Try again in a moment.' });
+  }
+});
 
 const server = http.createServer(app);
 
