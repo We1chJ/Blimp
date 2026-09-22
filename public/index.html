@@ -223,10 +223,10 @@
   /* ---------- controls ---------- */
   .controls-wrap {
     position: relative; flex: 1; min-height: 240px; margin-top: 16px;
-    display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 10px;
+    display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 24px;
   }
   .controls {
-    position: relative; width: 100%; flex: none; display: flex; align-items: flex-end; justify-content: space-between; gap: 10px;
+    position: relative; isolation: isolate; width: 100%; flex: none; display: flex; align-items: flex-end; justify-content: space-between; gap: 10px;
     padding-bottom: 10px;
   }
   .stack { display: flex; flex-direction: column; align-items: center; gap: 8px; }
@@ -291,14 +291,63 @@
   .controls.locked #padDrive, .controls.locked #padLift { pointer-events: none; }
   .controls.admin-flying { pointer-events: none; }
 
-  /* grey veil with ADMIN CONTROL knocked out of it: the letters are holes
-     onto the controls below, and the veil is what fades. */
-  .admin-overlay { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
-  .admin-overlay .veil { display: block; width: 100%; height: 100%; animation: adminVeil 1.9s ease-in-out infinite; }
-  .admin-overlay text {
-    font: 700 34px/1 "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif; letter-spacing: -1px;
+  /* admin has control: the two sticks are sealed inside a slowly morphing
+     bubble of the same glass, and the rest of the page goes liquid */
+  .bubble {
+    position: absolute; inset: -16px -12px; z-index: -1; pointer-events: none;
+    animation: blobMorph 9s ease-in-out infinite, blobBreathe 2.6s ease-in-out infinite;
   }
-  @keyframes adminVeil { 0%, 100% { opacity: .82; } 50% { opacity: 0; } }
+  @keyframes blobMorph {
+    0%, 100% { border-radius: 46% 54% 52% 48% / 54% 46% 54% 46%; }
+    25%      { border-radius: 58% 42% 44% 56% / 44% 58% 42% 56%; }
+    50%      { border-radius: 50% 50% 58% 42% / 56% 48% 52% 44%; }
+    75%      { border-radius: 42% 58% 46% 54% / 48% 54% 46% 52%; }
+  }
+  @keyframes blobBreathe {
+    0%, 100% { opacity: .95; transform: scale(1); }
+    50%      { opacity: .6;  transform: scale(1.03); }
+  }
+
+  .spectating.admin {
+    color: var(--danger); font-weight: 700;
+    animation: notePulse 2.6s ease-in-out infinite;
+  }
+  @keyframes notePulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+
+  /* the whole surface turns to liquid while the admin flies */
+  body.liquified .glass:not(#knobDrive):not(#knobLift):not(.numeral):not(.bubble) {
+    -webkit-backdrop-filter: blur(20px) saturate(215%); backdrop-filter: blur(20px) saturate(215%);
+    animation: liquidWobble 5.5s ease-in-out infinite;
+  }
+  @keyframes liquidWobble {
+    0%, 100% { transform: translateY(0) skewX(0deg) scaleY(1); }
+    33%      { transform: translateY(-1.5px) skewX(.35deg) scaleY(1.008); }
+    66%      { transform: translateY(1.5px) skewX(-.35deg) scaleY(.994); }
+  }
+  @supports (backdrop-filter: url(#lgLiquid)) {
+    body.liquified .glass:not(#knobDrive):not(#knobLift):not(.numeral):not(.bubble) {
+      -webkit-backdrop-filter: blur(14px) saturate(215%) url(#lgLiquid);
+      backdrop-filter: blur(14px) saturate(215%) url(#lgLiquid);
+    }
+  }
+
+  /* ---------- 3-2-1 ---------- */
+  .countdown {
+    position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; pointer-events: none;
+  }
+  .countdown .numeral {
+    width: 148px; height: 148px; border-radius: 50%;
+    display: grid; place-items: center;
+    font: 700 84px/1 "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    color: rgba(255,255,255,.92); text-shadow: 0 2px 18px rgba(0,20,41,.45);
+    animation: countPop .95s cubic-bezier(.22,1,.36,1) both;
+  }
+  @keyframes countPop {
+    0%   { transform: scale(.55); opacity: 0; filter: blur(10px); }
+    28%  { transform: scale(1.1);  opacity: 1; filter: blur(0); }
+    68%  { transform: scale(1);    opacity: 1; filter: blur(0); }
+    100% { transform: scale(.92);  opacity: 0; filter: blur(7px); }
+  } 50% { opacity: 0; } }
 
   .spectating {
     z-index: 2; padding: 6px 14px; border-radius: 14px; max-width: 100%; text-align: center;
@@ -406,7 +455,17 @@
     <feGaussianBlur in="noise" stdDeviation="4" result="soft"/>
     <feDisplacementMap in="SourceGraphic" in2="soft" scale="20" xChannelSelector="R" yChannelSelector="G"/>
   </filter>
+  <filter id="lgLiquid" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.009 0.013" numOctaves="2" seed="4" result="noise">
+      <animate attributeName="baseFrequency" dur="9s" repeatCount="indefinite"
+               values="0.009 0.013; 0.016 0.008; 0.009 0.013"/>
+    </feTurbulence>
+    <feGaussianBlur in="noise" stdDeviation="3" result="soft"/>
+    <feDisplacementMap in="SourceGraphic" in2="soft" scale="44" xChannelSelector="R" yChannelSelector="G"/>
+  </filter>
 </svg>
+
+<div class="countdown" id="countdown" hidden><span class="numeral glass" id="countdownNum">3</span></div>
 
 <div class="wrap">
 
@@ -473,18 +532,7 @@
         <span class="stick-label">Altitude</span>
       </div>
 
-      <div class="admin-overlay" id="adminOverlay" hidden>
-      <svg class="veil" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <mask id="adminKnockout">
-            <rect width="100%" height="100%" fill="#fff"/>
-            <text x="50%" y="40%" fill="#000" text-anchor="middle" dominant-baseline="middle">ADMIN</text>
-            <text x="50%" y="72%" fill="#000" text-anchor="middle" dominant-baseline="middle">CONTROL</text>
-          </mask>
-        </defs>
-        <rect width="100%" height="100%" fill="#8a97a3" mask="url(#adminKnockout)"/>
-      </svg>
-      </div>
+      <div class="bubble glass" id="adminBubble" hidden></div>
     </div>
   </div>
 
@@ -694,9 +742,14 @@ function renderYou() {
   const adminHasControl = latestQueue.adminFlying && !y.canControl;
   controls.classList.toggle('locked', !y.canControl && !adminHasControl);
   controls.classList.toggle('admin-flying', adminHasControl);
-  adminOverlay.hidden = !adminHasControl;
+  adminBubble.hidden = !adminHasControl;
+  document.body.classList.toggle('liquified', adminHasControl);
   manual.classList.toggle('locked', !y.canControl);
-  sticksNote.hidden = y.canControl || adminHasControl;
+  sticksNote.hidden = y.canControl;
+  sticksNote.classList.toggle('admin', adminHasControl);
+  sticksNote.textContent = adminHasControl
+    ? 'Admin control'
+    : 'Spectating \u2014 join the queue to fly';
 
   adminToggle.hidden = y.isAdmin && !adminPanel.hidden;
   if (y.isAdmin && adminLoginPanel.hidden === false) {
@@ -707,7 +760,30 @@ function renderYou() {
   adminControlBtn.textContent = overriding ? 'Release control' : 'Take control';
   adminControlBtn.classList.toggle('taking', overriding);
 
+  renderCountdown();
   renderQueue();   // whether a row reads "You" depends on your own state
+}
+
+// Flash 3-2-1 in the middle of the screen when your turn is about to end,
+// or about to start because you are next in line.
+let countdownAt = 0;
+function renderCountdown() {
+  const y = latestYou;
+  const imminent = y.state === 'flying' || (y.state === 'waiting' && y.position === 1);
+  const n = imminent ? Math.ceil(y.msLeft / 1000) : 0;
+
+  if (n < 1 || n > 3) {
+    countdown.hidden = true;
+    countdownAt = 0;
+    return;
+  }
+  if (n === countdownAt) return;        // same second, let the animation finish
+  countdownAt = n;
+  countdown.hidden = false;
+  countdownNum.textContent = n;
+  countdownNum.style.animation = 'none';
+  void countdownNum.offsetWidth;        // reflow, so the pop replays per digit
+  countdownNum.style.animation = '';
 }
 
 function renderAdminList() {
