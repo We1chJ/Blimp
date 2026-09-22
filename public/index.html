@@ -21,6 +21,9 @@
     --green-ink:  #1fbd7a;
     --orange:     #ff7a45;
     --danger:     #e5484d;
+    --danger-ink: #b9282d;
+    --blue:       #3b8ef0;
+    --blue-ink:   #1a5fb4;
     --radius:     26px;
   }
 
@@ -100,7 +103,8 @@
   }
 
   /* ---------- masthead ---------- */
-  .masthead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  /* relative so the how-it-works popover can hang off the info button */
+  .masthead { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .wordmark { margin: 0; font-size: 21px; font-weight: 700; color: var(--ink-strong); letter-spacing: -.01em; }
   .info-btn {
     width: 30px; height: 30px; flex: none; border-radius: 50%; cursor: pointer;
@@ -111,24 +115,28 @@
                 inset 0 -6px 14px -10px rgba(0,25,50,.5);
     font: 700 15px "Inter", system-ui, sans-serif; color: rgba(28,38,48,.8);
   }
+  .info-btn[aria-expanded="true"] { background: rgba(255,255,255,.55); color: var(--ink); }
 
   /* ---------- how it works ---------- */
-  .howto { margin-top: 12px; border-radius: 16px; overflow: hidden; }
-  .howto summary {
-    display: flex; align-items: center; gap: 8px; justify-content: space-between;
-    padding: 10px 14px; min-height: 40px; cursor: pointer; list-style: none;
-    font-size: 12px; font-weight: 600; color: rgba(38,51,64,.9);
+  /* a popover growing out of the info button's corner, rather than a bar
+     taking up a row of the page for a line of text nobody re-reads */
+  .howto {
+    position: absolute; z-index: 70; top: calc(100% + 10px); right: 0;
+    width: min(320px, calc(100vw - 40px));
+    padding: 14px 16px 16px; border-radius: 20px;
+    background: rgba(255,255,255,.72);
+    transform-origin: top right;
+    animation: howtoPop .22s cubic-bezier(.22,1,.36,1) both;
   }
-  .howto summary::-webkit-details-marker { display: none; }
-  .howto summary::after {
-    content: '\2304'; flex: none; font-size: 14px; font-weight: 700; color: rgba(38,51,64,.6);
-    line-height: 1;
+  @keyframes howtoPop {
+    from { opacity: 0; transform: scale(.86) translate(10px, -10px); }
+    to   { opacity: 1; transform: none; }
   }
-  .howto[open] summary::after { transform: rotate(180deg); }
-  .howto ul {
-    margin: 0; padding: 2px 16px 14px 32px;
-    border-top: 1px solid rgba(26,38,51,.08);
+  .howto h2 {
+    margin: 0 0 4px; font-size: 13px; font-weight: 700; line-height: 1.35;
+    color: var(--ink-strong);
   }
+  .howto ul { margin: 0; padding: 0 0 0 18px; }
   .howto li { margin-top: 8px; font-size: 12px; color: rgba(38,51,64,.9); }
   .howto b { font-weight: 700; }
 
@@ -222,12 +230,14 @@
 
   /* ---------- controls ---------- */
   .controls-wrap {
-    position: relative; flex: 1; min-height: 240px; margin-top: 16px;
+    position: relative; flex: 1; min-height: 240px; margin: 16px 0 20px;
     display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 24px;
   }
+  /* the side padding is the admin bubble's inner gutter - it lives here rather
+     than on the bubble so the sticks don't shift when the bubble appears */
   .controls {
     position: relative; isolation: isolate; width: 100%; flex: none; display: flex; align-items: flex-end; justify-content: space-between; gap: 10px;
-    padding-bottom: 10px;
+    padding: 0 14px 10px;
   }
   .stack { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 
@@ -291,29 +301,12 @@
   .controls.locked #padDrive, .controls.locked #padLift { pointer-events: none; }
   .controls.admin-flying { pointer-events: none; }
 
-  /* admin has control: the two sticks are sealed inside a slowly morphing
-     bubble of the same glass, and the rest of the page goes liquid */
+  /* admin has control: the two sticks are sealed inside a rounded glass pane
+     of the same family as the rest of the furniture, and the page goes liquid */
   .bubble {
-    position: absolute; inset: -16px -12px; z-index: -1; pointer-events: none;
-    animation: blobMorph 9s ease-in-out infinite, blobBreathe 2.6s ease-in-out infinite;
+    position: absolute; inset: -14px 0 -8px; z-index: -1; pointer-events: none;
+    border-radius: var(--radius);
   }
-  @keyframes blobMorph {
-    0%, 100% { border-radius: 46% 54% 52% 48% / 54% 46% 54% 46%; }
-    25%      { border-radius: 58% 42% 44% 56% / 44% 58% 42% 56%; }
-    50%      { border-radius: 50% 50% 58% 42% / 56% 48% 52% 44%; }
-    75%      { border-radius: 42% 58% 46% 54% / 48% 54% 46% 52%; }
-  }
-  @keyframes blobBreathe {
-    0%, 100% { opacity: .95; transform: scale(1); }
-    50%      { opacity: .6;  transform: scale(1.03); }
-  }
-
-  .spectating.admin {
-    color: var(--danger); font-weight: 700;
-    animation: notePulse 2.6s ease-in-out infinite;
-  }
-  @keyframes notePulse { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
-
   /* the whole surface turns to liquid while the admin flies */
   body.liquified .glass:not(#knobDrive):not(#knobLift):not(.numeral):not(.bubble) {
     -webkit-backdrop-filter: blur(20px) saturate(215%); backdrop-filter: blur(20px) saturate(215%);
@@ -347,14 +340,20 @@
     28%  { transform: scale(1.1);  opacity: 1; filter: blur(0); }
     68%  { transform: scale(1);    opacity: 1; filter: blur(0); }
     100% { transform: scale(.92);  opacity: 0; filter: blur(7px); }
-  } 50% { opacity: 0; } }
+  }
 
+  /* one banner above the sticks, tinted to whoever has the blimp:
+     blue while you watch, green on your turn, red when the admin takes over */
   .spectating {
     z-index: 2; padding: 6px 14px; border-radius: 14px; max-width: 100%; text-align: center;
     background: rgba(255,255,255,.6); border: 1px solid rgba(255,255,255,.8);
     -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-    font-size: 11px; font-weight: 600; color: rgba(38,51,64,.9);
+    font-size: 11px; font-weight: 700; line-height: 1.4; color: rgba(38,51,64,.9);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 6px 16px -8px rgba(0,20,41,.3);
   }
+  .spectating.blue  { background: rgba(219,234,255,.7); color: var(--blue-ink); }
+  .spectating.green { background: rgba(215,248,232,.7); color: var(--green-deep); }
+  .spectating.red   { background: rgba(255,224,225,.72); color: var(--danger-ink); }
 
   /* ---------- footer ---------- */
   .footer {
@@ -374,6 +373,62 @@
     box-shadow: inset 0 1px 0 rgba(255,255,255,.95);
     font: 700 11px "Inter", system-ui, sans-serif;
   }
+
+  /* ---------- donate sheet ---------- */
+  .sheet {
+    position: fixed; inset: 0; z-index: 80; display: grid; place-items: end center;
+    padding: 16px; background: rgba(12,26,40,.28);
+    -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+    animation: sheetFade .22s ease both;
+  }
+  @keyframes sheetFade { from { opacity: 0; } to { opacity: 1; } }
+  .sheet-card {
+    position: relative; width: 100%; max-width: 375px; padding: 18px 18px 16px;
+    border-radius: var(--radius); background: rgba(255,255,255,.72);
+    animation: sheetRise .3s cubic-bezier(.22,1,.36,1) both;
+  }
+  @keyframes sheetRise { from { transform: translateY(18px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .sheet-card h2 { margin: 0; font-size: 16px; font-weight: 700; color: var(--ink-strong); }
+  .sheet-sub { margin: 4px 0 14px; font-size: 12px; color: var(--ink-muted); }
+  .sheet-close {
+    position: absolute; right: 12px; top: 12px; width: 26px; height: 26px; border-radius: 50%;
+    display: grid; place-items: center; cursor: pointer; line-height: 1;
+    background: rgba(255,255,255,.55); border: 1px solid rgba(255,255,255,.8);
+    font: 600 15px "Inter", system-ui, sans-serif; color: var(--ink-soft);
+  }
+
+  .amounts { display: flex; gap: 8px; }
+  .amount {
+    flex: 1; padding: 11px 0; border-radius: 14px; cursor: pointer;
+    background: rgba(255,255,255,.5); border: 1px solid rgba(255,255,255,.8);
+    font: 700 14px "Inter", system-ui, sans-serif; color: var(--ink);
+  }
+  .amount.on {
+    background: linear-gradient(168deg, rgba(41,199,128,.28), rgba(41,199,128,.14));
+    border-color: var(--green); color: var(--green-deep);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 0 0 3px rgba(41,199,128,.18);
+  }
+  .amount-custom {
+    display: flex; align-items: center; gap: 6px; margin-top: 8px;
+    padding: 9px 12px; border-radius: 14px;
+    background: rgba(255,255,255,.5); border: 1px solid rgba(255,255,255,.8);
+    font: 700 14px "Inter", system-ui, sans-serif; color: var(--ink-muted);
+  }
+  .amount-custom:focus-within { border-color: var(--green); box-shadow: 0 0 0 3px rgba(41,199,128,.2); }
+  .amount-custom input {
+    flex: 1; min-width: 0; padding: 0; background: none; border: none; outline: none;
+    font: 700 14px "Inter", system-ui, sans-serif; color: var(--ink);
+    -moz-appearance: textfield;
+  }
+  .amount-custom input::-webkit-outer-spin-button,
+  .amount-custom input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .amount-custom input::placeholder { color: rgba(77,92,102,.7); font-weight: 600; }
+
+  /* Stripe renders the wallet buttons into here, inside its own iframe */
+  #expressCheckout { margin-top: 14px; min-height: 46px; }
+  .sheet-note { margin: 10px 0 0; font-size: 11px; font-weight: 600; text-align: center; color: var(--ink-muted); }
+  .sheet-note.bad { color: var(--danger-ink); }
+  .sheet-note.good { color: var(--green-deep); }
 
   /* ---------- status + admin ---------- */
   .status {
@@ -471,19 +526,20 @@
 
   <div class="masthead">
     <h1 class="wordmark">flyolin.lol</h1>
-    <button class="info-btn" id="infoBtn" aria-label="How it works">i</button>
-  </div>
+    <button class="info-btn" id="infoBtn" aria-label="How it works"
+            aria-expanded="false" aria-controls="howto">i</button>
 
-  <details class="howto glass" id="howto">
-    <summary>Take turns flying a real blimp — 90 sec per turn</summary>
-    <ul>
-      <li>When nobody is queued, the blimp idles or an admin flies it.</li>
-      <li>Enter your name, join the queue, and wait your turn.</li>
-      <li><b>Keep this page open</b> on your phone — close it and you lose your spot.</li>
-      <li>When it is your turn you get <b>90 seconds</b> of flying time.</li>
-      <li>An admin can take control at any time, so fly responsibly.</li>
-    </ul>
-  </details>
+    <div class="howto glass" id="howto" role="dialog" aria-label="How it works" hidden>
+      <h2>Take turns flying a real blimp — 90 sec per turn</h2>
+      <ul>
+        <li>When nobody is queued, the blimp idles or an admin flies it.</li>
+        <li>Enter your name, join the queue, and wait your turn.</li>
+        <li><b>Keep this page open</b> on your phone — close it and you lose your spot.</li>
+        <li>When it is your turn you get <b>90 seconds</b> of flying time.</li>
+        <li>An admin can take control at any time, so fly responsibly.</li>
+      </ul>
+    </div>
+  </div>
 
   <div class="queue-card glass">
     <div class="now-row empty" id="nowRow">
@@ -512,7 +568,7 @@
   </div>
 
   <div class="controls-wrap">
-    <span class="spectating" id="sticksNote" hidden>Spectating — join the queue to fly</span>
+    <span class="spectating blue" id="sticksNote">You’re spectating right now. Join the queue to fly.</span>
 
     <div class="controls" id="controls">
       <div class="stack">
@@ -541,6 +597,28 @@
     <a class="donate" id="donateBtn" href="#">Donate</a>
   </div>
 
+</div>
+
+<div class="sheet" id="donateSheet" hidden>
+  <div class="sheet-card glass" role="dialog" aria-modal="true" aria-labelledby="donateTitle">
+    <button class="sheet-close" id="donateClose" aria-label="Close">&times;</button>
+    <h2 id="donateTitle">Keep the blimp flying</h2>
+    <p class="sheet-sub">Helium, batteries and hosting. Any amount helps.</p>
+
+    <div class="amounts" id="donateAmounts">
+      <button type="button" class="amount" data-cents="300">$3</button>
+      <button type="button" class="amount on" data-cents="500">$5</button>
+      <button type="button" class="amount" data-cents="1000">$10</button>
+    </div>
+    <label class="amount-custom">
+      <span>$</span>
+      <input id="donateCustom" type="number" min="1" max="500" step="1"
+             inputmode="decimal" placeholder="Other amount">
+    </label>
+
+    <div id="expressCheckout"></div>
+    <p class="sheet-note" id="donateNote">Loading payment options…</p>
+  </div>
 </div>
 
 <div class="extras">
@@ -735,7 +813,7 @@ function renderYou() {
   } else if (y.state === 'waiting') {
     const b = document.createElement('b');
     b.textContent = '#' + y.position;
-    youMsg.textContent = "You're ";
+    youMsg.textContent = 'You\u2019re ';
     youMsg.append(b, document.createTextNode(' — starts in ' + fmtTime(y.msLeft)));
   }
 
@@ -745,11 +823,15 @@ function renderYou() {
   adminBubble.hidden = !adminHasControl;
   document.body.classList.toggle('liquified', adminHasControl);
   manual.classList.toggle('locked', !y.canControl);
-  sticksNote.hidden = y.canControl;
-  sticksNote.classList.toggle('admin', adminHasControl);
   sticksNote.textContent = adminHasControl
-    ? 'Admin control'
-    : 'Spectating \u2014 join the queue to fly';
+    ? 'The admin is taking control temporarily.'
+    : y.canControl
+      ? 'It\u2019s your turn to fly! Use the controls below.'
+      : 'You\u2019re spectating right now. Join the queue to fly.';
+  sticksNote.classList.toggle('red', adminHasControl);
+  sticksNote.classList.toggle('green', y.canControl);
+  sticksNote.classList.toggle('blue', !adminHasControl && !y.canControl);
+  sticksNote.hidden = false;
 
   adminToggle.hidden = y.isAdmin && !adminPanel.hidden;
   if (y.isAdmin && adminLoginPanel.hidden === false) {
@@ -833,8 +915,176 @@ addEventListener('beforeunload', e => {
 });
 
 // ---------------- info / about ----------------
-infoBtn.onclick = () => { howto.open = !howto.open; };
-aboutBtn.onclick = () => { howto.open = true; howto.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+// ---------- donations ----------
+// Apple Pay / Google Pay via Stripe's Express Checkout Element, confirmed in
+// place: `redirect: 'if_required'` keeps wallet payments on this page, so the
+// donor never leaves the blimp. The PaymentIntent is minted only once the
+// wallet sheet has been confirmed, which is why the amount can be chosen here.
+const DONATE_MIN = 100, DONATE_MAX = 50000;
+let donateCents = 500;
+let donateStripe = null, donateElements = null, donateBooted = false;
+
+function loadStripeJs() {
+  if (window.Stripe) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const el = document.createElement('script');
+    // Stripe.js has to come from Stripe, never bundled or self-hosted.
+    el.src = 'https://js.stripe.com/dahlia/stripe.js';
+    el.onload = resolve;
+    el.onerror = () => reject(new Error('Could not load Stripe.'));
+    document.head.appendChild(el);
+  });
+}
+
+function donateSay(msg, tone) {
+  donateNote.textContent = msg;
+  donateNote.classList.toggle('bad', tone === 'bad');
+  donateNote.classList.toggle('good', tone === 'good');
+}
+
+function setDonateAmount(cents, fromCustom) {
+  donateCents = Math.min(DONATE_MAX, Math.max(DONATE_MIN, Math.round(cents)));
+  for (const b of donateAmounts.children) {
+    b.classList.toggle('on', !fromCustom && Number(b.dataset.cents) === donateCents);
+  }
+  // the wallet sheet shows this amount, so Elements has to be told about it
+  if (donateElements) donateElements.update({ amount: donateCents });
+}
+
+donateAmounts.onclick = e => {
+  const btn = e.target.closest('.amount');
+  if (!btn) return;
+  donateCustom.value = '';
+  setDonateAmount(Number(btn.dataset.cents), false);
+};
+donateCustom.oninput = () => {
+  const dollars = parseFloat(donateCustom.value);
+  if (!Number.isFinite(dollars)) return;
+  setDonateAmount(dollars * 100, true);
+};
+
+let donateConfig = null;
+function getDonateConfig() {
+  if (!donateConfig) donateConfig = fetch('/api/donate/config').then(r => r.json());
+  return donateConfig;
+}
+
+async function bootDonate() {
+  if (donateBooted) return;
+  donateBooted = true;
+  try {
+    const cfg = await getDonateConfig();
+    if (!cfg.enabled) { donateSay('Donations are not set up yet.', 'bad'); return; }
+
+    await loadStripeJs();
+    donateStripe = Stripe(cfg.publishableKey);
+    donateElements = donateStripe.elements({
+      mode: 'payment',
+      amount: donateCents,
+      currency: 'usd',
+      appearance: { theme: 'flat', variables: { borderRadius: '14px' } },
+    });
+
+    const ece = donateElements.create('expressCheckout', {
+      emailRequired: true,                        // wallets withhold it otherwise
+      buttonHeight: 46,
+      layout: { maxColumns: 1, overflow: 'never' },
+    });
+    ece.on('availablepaymentmethodschange', ({ paymentMethods }) => {
+      if (paymentMethods) donateSay('');
+      else donateSay('No wallet on this device. Open flyolin.lol on a phone with Apple Pay or Google Pay.', 'bad');
+    });
+    ece.on('confirm', confirmDonation);
+    ece.mount('#expressCheckout');
+  } catch (err) {
+    donateBooted = false;                         // let them try again
+    donateSay(err.message, 'bad');
+  }
+}
+
+async function confirmDonation(event) {
+  donateSay('');
+  const { error: submitError } = await donateElements.submit();
+  if (submitError) { donateSay(submitError.message, 'bad'); return; }
+
+  // the wallet collected this because of emailRequired; Stripe mails the
+  // receipt to it once the charge succeeds
+  const email = event && event.billingDetails && event.billingDetails.email;
+
+  let clientSecret;
+  try {
+    const res = await fetch('/api/donate/intent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount: donateCents, email }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not start the payment.');
+    clientSecret = data.clientSecret;
+  } catch (err) {
+    donateSay(err.message, 'bad');
+    return;
+  }
+
+  const { error } = await donateStripe.confirmPayment({
+    elements: donateElements,
+    clientSecret,
+    confirmParams: { return_url: location.origin + '/?donated=1' },
+    redirect: 'if_required',
+  });
+  if (error) donateSay(error.message, 'bad');
+  else thankDonor();
+}
+
+function thankDonor() {
+  expressCheckout.hidden = true;
+  donateAmounts.hidden = true;
+  donateCustom.closest('.amount-custom').hidden = true;
+  document.getElementById('donateTitle').textContent = 'Thank you!';
+  document.querySelector('.sheet-sub').textContent = 'The blimp thanks you too.';
+  donateSay('Your donation went through.', 'good');
+}
+
+function openDonate() { donateSheet.hidden = false; bootDonate(); }
+function closeDonate() { donateSheet.hidden = true; }
+
+donateBtn.onclick = e => { e.preventDefault(); openDonate(); };
+donateClose.onclick = closeDonate;
+donateSheet.onclick = e => { if (e.target === donateSheet) closeDonate(); };
+addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (!donateSheet.hidden) closeDonate();
+  else if (!howto.hidden) setHowto(false);
+});
+
+// a redirect-based method (not the wallets) sends the donor back here
+if (new URLSearchParams(location.search).get('donated')) {
+  donateSheet.hidden = false;
+  donateBooted = true;
+  thankDonor();
+  history.replaceState(null, '', location.pathname);
+}
+
+// hide the button outright when the server has no Stripe keys
+getDonateConfig().then(cfg => { donateBtn.hidden = !cfg.enabled; }).catch(() => {});
+
+// how-it-works popover, hanging off the info button
+function setHowto(open) {
+  howto.hidden = !open;
+  infoBtn.setAttribute('aria-expanded', String(open));
+}
+// stopPropagation on both openers, or the outside-click handler below sees the
+// same click bubble up and shuts the popover again immediately
+infoBtn.onclick = e => { e.stopPropagation(); setHowto(howto.hidden); };
+aboutBtn.onclick = e => {
+  e.stopPropagation();
+  setHowto(true);
+  // About lives in the footer, which can be a screen away from the popover
+  document.querySelector('.masthead').scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+addEventListener('click', e => {
+  if (!howto.hidden && !howto.contains(e.target)) setHowto(false);
+});
 
 // ---------------- admin ----------------
 adminToggle.onclick = () => {
@@ -966,13 +1216,14 @@ function recomputeKeys() {
   keyLift = (liftKey !== 0);
 }
 
-function isTyping(e) {
+function keysBlocked(e) {
+  if (!donateSheet.hidden || !howto.hidden) return true;   // an overlay is up
   const t = e.target;
   return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA');
 }
 
 addEventListener('keydown', e => {
-  if (isTyping(e)) return;
+  if (keysBlocked(e)) return;
   const k = e.key.toLowerCase();
   if (!(k in DRIVE_KEYS) && !(k in LIFT_KEYS)) return;
   e.preventDefault();
