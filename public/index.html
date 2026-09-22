@@ -2,21 +2,26 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>Olin's Community Blimp</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#9db6cc">
+<title>flyolin.lol — Olin's Community Blimp</title>
 <style>
   :root {
-    --canvas:        #f6f8fa;
-    --surface:       #ffffff;
-    --surface-muted: #f6f8fa;
-    --border:        #d1d9e0;
-    --border-strong: rgba(31,35,40,.15);
-    --fg:            #1f2328;
-    --fg-muted:      #59636e;
-    --accent:        #0969da;
-    --success:       #1f883d;
-    --danger:        #cf222e;
-    --radius:        6px;
+    --ink:        #1c2630;
+    --ink-strong: #172430;
+    --ink-soft:   rgba(28,38,48,.85);
+    --ink-muted:  rgba(77,92,102,.85);
+    --glass:      rgba(255,255,255,.55);
+    --glass-thin: rgba(255,255,255,.32);
+    --glass-edge: rgba(255,255,255,.8);
+    --shadow:     0 6px 20px -4px rgba(0,20,41,.22);
+    --green:      #29c780;
+    --green-deep: #179959;
+    --green-mid:  #33d98c;
+    --green-ink:  #1fbd7a;
+    --orange:     #ff7a45;
+    --danger:     #e5484d;
+    --radius:     26px;
   }
 
   * { box-sizing: border-box; }
@@ -24,374 +29,433 @@
 
   body {
     margin: 0;
-    padding: 28px 16px 48px;
-    background: var(--canvas);
-    color: var(--fg);
-    font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+    min-height: 100dvh;
+    padding: 0 20px;
+    color: var(--ink);
+    font: 13px/1.4 "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
+    display: flex; flex-direction: column;
+  }
+  /* sky sits behind everything so the glass has something to diffuse */
+  body::before {
+    content: ''; position: fixed; inset: 0; z-index: -1;
+    background: #9db6cc url('sky.jpg') center/cover no-repeat;
   }
 
-  .wrap { max-width: 420px; margin: 0 auto; }
+  .wrap {
+    width: 100%; max-width: 375px; margin: 0 auto;
+    min-height: 100dvh; padding-top: max(14px, env(safe-area-inset-top));
+    display: flex; flex-direction: column;
+  }
+  .extras { width: 100%; max-width: 375px; margin: 0 auto; }
+
+  /* liquid glass: blurred + saturated backdrop, a glossy sheen baked into the
+     background, a bright top rim and a soft float shadow */
+  .glass {
+    background:
+      linear-gradient(168deg, rgba(255,255,255,.58), rgba(255,255,255,.14) 44%, rgba(255,255,255,.30)),
+      rgba(255,255,255,.26);
+    border: 1px solid rgba(255,255,255,.68);
+    -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
+    box-shadow:
+      0 10px 30px -8px rgba(0,20,41,.34),
+      inset 0 1px 0 rgba(255,255,255,.95),
+      inset 0 -1px 0 rgba(255,255,255,.4);
+  }
 
   /* ---------- masthead ---------- */
-  h1 {
-    margin: 0 0 6px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--border);
-    font-size: 24px;
-    font-weight: 600;
-    letter-spacing: -.01em;
+  .masthead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .wordmark { margin: 0; font-size: 21px; font-weight: 700; color: var(--ink-strong); letter-spacing: -.01em; }
+  .info-btn {
+    width: 30px; height: 30px; flex: none; border-radius: 50%; cursor: pointer;
+    background: linear-gradient(168deg, rgba(255,255,255,.7), rgba(255,255,255,.25));
+    border: 1px solid rgba(255,255,255,.7);
+    -webkit-backdrop-filter: blur(20px) saturate(180%); backdrop-filter: blur(20px) saturate(180%);
+    box-shadow: 0 6px 16px -6px rgba(0,20,41,.35), inset 0 1px 0 rgba(255,255,255,.95);
+    font: 700 15px "Inter", system-ui, sans-serif; color: rgba(28,38,48,.8);
   }
-  .site-status {
-    margin: 0 0 16px;
-    font-size: 12px;
-    color: var(--fg-muted);
-  }
-  .dot {
-    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
-    background: #8c959f; margin-right: 6px; vertical-align: middle;
-  }
-  .dot.on { background: #2da44e; }
 
   /* ---------- how it works ---------- */
-  .howto {
-    margin-bottom: 16px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--surface);
-  }
+  .howto { margin-top: 12px; border-radius: 16px; overflow: hidden; }
   .howto summary {
-    display: flex; justify-content: space-between; align-items: center; gap: 12px;
-    padding: 12px 16px; cursor: pointer; list-style: none;
-    font-size: 14px; font-weight: 600; color: var(--accent);
+    display: flex; align-items: center; gap: 8px; justify-content: space-between;
+    padding: 10px 14px; min-height: 40px; cursor: pointer; list-style: none;
+    font-size: 12px; font-weight: 600; color: rgba(38,51,64,.9);
   }
   .howto summary::-webkit-details-marker { display: none; }
-  .howto summary::after { content: '+'; color: var(--fg-muted); font-size: 16px; font-weight: 400; }
-  .howto[open] summary::after { content: '\2212'; }
+  .howto summary::after {
+    content: '\2304'; flex: none; font-size: 14px; font-weight: 700; color: rgba(38,51,64,.6);
+    line-height: 1;
+  }
+  .howto[open] summary::after { transform: rotate(180deg); }
   .howto ul {
-    margin: 0; padding: 14px 16px 16px 32px;
-    border-top: 1px solid var(--border);
+    margin: 0; padding: 2px 16px 14px 32px;
+    border-top: 1px solid rgba(26,38,51,.08);
   }
-  .howto li { margin-bottom: 8px; color: var(--fg-muted); }
-  .howto li:last-child { margin-bottom: 0; }
-  .howto b { color: var(--fg); font-weight: 600; }
+  .howto li { margin-top: 8px; font-size: 12px; color: rgba(38,51,64,.9); }
+  .howto b { font-weight: 700; }
 
-  /* ---------- boxes ---------- */
-  .box {
-    margin-bottom: 16px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--surface);
-    overflow: hidden;
-  }
-  .cap {
-    margin: 0; padding: 10px 16px;
-    background: var(--surface-muted);
-    border-bottom: 1px solid var(--border);
-    font-size: 13px; font-weight: 600;
-  }
-  .box-body { padding: 16px; }
+  /* ---------- queue card ---------- */
+  .queue-card { margin-top: 12px; border-radius: var(--radius); overflow: hidden; }
 
-  /* ---------- now flying ---------- */
-  .now-flying {
-    display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
-    font-size: 20px; font-weight: 600; letter-spacing: -.01em;
+  .now-row {
+    position: relative; display: flex; align-items: center; gap: 8px;
+    min-height: 52px; padding: 8px 14px;
   }
-  .now-flying .time {
-    font-size: 20px; color: var(--fg-muted); font-weight: 500;
-    font-variant-numeric: tabular-nums; white-space: nowrap;
+  .now-row .fill {
+    position: absolute; left: 0; top: 0; bottom: 0; width: 0;
+    background: rgba(41,199,128,.62); transition: width .4s linear;
   }
-  .now-flying.empty { font-size: 15px; font-weight: 400; color: var(--fg-muted); }
+  .now-row > *:not(.fill) { position: relative; }
+  .now-row .who { flex: 1; min-width: 0; }
+  .now-row .nm {
+    display: block; font-size: 13px; font-weight: 700; color: #fff;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .now-row .sub { display: block; font-size: 9px; font-weight: 600; color: rgba(255,255,255,.85); }
+  .now-row .left { font-size: 14px; font-weight: 700; color: #fff; white-space: nowrap; }
+  /* nobody flying: no green fill behind, so ink instead of white */
+  .now-row.empty .nm { color: var(--ink); font-weight: 600; }
+  .now-row.empty .sub { color: var(--ink-muted); }
+  .now-row.empty .left { color: var(--ink-muted); font-size: 12px; }
 
-  .progress {
-    height: 6px; margin-top: 12px; border-radius: 99px;
-    background: #eaeef2; overflow: hidden;
+  .avatar {
+    flex: none; width: 24px; height: 24px; border-radius: 50%;
+    border: 1px solid #fff; background: #b34af2;
+    display: grid; place-items: center;
+    font-size: 10px; font-weight: 700; color: rgba(255,255,255,.95);
   }
-  .progress i {
-    display: block; height: 100%; width: 0; border-radius: 99px;
-    background: var(--success); transition: width .35s linear;
-  }
-  .progress.low i { background: #bf8700; }
-  .progress.paused i { background: #8c959f; }
-
-  /* ---------- queue list ---------- */
-  .qhead {
-    display: grid; grid-template-columns: 24px 1fr 64px; gap: 10px;
-    margin-top: 18px; padding-bottom: 6px; border-bottom: 1px solid var(--border);
-    font-size: 12px; font-weight: 600; color: var(--fg-muted);
-  }
-  .qhead span:last-child { text-align: right; }
+  .now-row .avatar { width: 32px; height: 32px; font-size: 12px; }
 
   .up-next { list-style: none; margin: 0; padding: 0; }
   .up-next li {
-    display: grid; grid-template-columns: 24px 1fr 64px; gap: 10px; align-items: center;
-    padding: 9px 0; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+    padding: 7px 14px; border-top: 1px solid rgba(26,38,51,.08);
   }
-  .up-next li:last-child { border-bottom: none; }
-  .up-next .pos { color: var(--fg-muted); font-size: 12px; font-variant-numeric: tabular-nums; }
-  .up-next .nm { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .up-next .eta { text-align: right; font-size: 13px; color: var(--fg-muted); font-variant-numeric: tabular-nums; }
-  .up-next li.empty {
-    display: block; padding: 12px 0 2px; color: var(--fg-muted); font-size: 13px; border-bottom: none;
+  .up-next .nm {
+    flex: 1; min-width: 0; font-size: 13px; font-weight: 600; color: var(--ink);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .up-next .wait { font-size: 11px; font-weight: 600; color: var(--ink-muted); white-space: nowrap; }
+  .up-next .badge {
+    flex: none; min-width: 26px; padding: 3px 6px; border-radius: 9px; text-align: center;
+    background: rgba(255,255,255,.6); font-size: 10px; font-weight: 700; color: var(--green-ink);
+  }
+  .up-next li.me .nm { color: var(--green-deep); }
+  .up-next li.empty { justify-content: center; font-size: 12px; color: var(--ink-muted); padding: 12px 14px; }
+
+  /* ---------- join / your status ---------- */
+  .join-row, .you-status {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 12px; border-top: 1px solid rgba(26,38,51,.08);
+    background: rgba(255,255,255,.28);
+  }
+  .join-row input {
+    flex: 1; min-width: 0; padding: 9px 12px; border-radius: 12px;
+    background: rgba(255,255,255,.7); border: 1px solid rgba(255,255,255,.85);
+    font: 13px "Inter", system-ui, sans-serif; color: var(--ink);
+  }
+  .join-row input::placeholder { color: rgba(77,92,102,.7); }
+  .join-row input:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 3px rgba(41,199,128,.25); }
+
+  .btn {
+    flex: none; padding: 9px 16px; border-radius: 12px; cursor: pointer;
+    border: 1px solid rgba(255,255,255,.85); background: rgba(255,255,255,.6);
+    font: 700 12px "Inter", system-ui, sans-serif; color: rgba(38,51,64,.9);
+  }
+  .btn.go { background: var(--green); border-color: rgba(255,255,255,.6); color: #fff; }
+  .btn.go:active { background: var(--green-deep); }
+
+  .you-status .msg { flex: 1; min-width: 0; font-size: 12px; font-weight: 600; color: rgba(38,51,64,.9); }
+  .you-status .msg b { color: var(--green-deep); }
+
+  .note {
+    margin: 0; padding: 9px 14px; border-top: 1px solid rgba(26,38,51,.08);
+    background: rgba(255,122,69,.16); font-size: 11px; font-weight: 600; color: #8a3a12;
   }
 
-  /* ---------- controls: buttons + inputs ---------- */
-  .btn, .you-row button, .you-status button, .admin-login button, .admin-control button, #send {
-    padding: 6px 14px;
-    border: 1px solid var(--border-strong);
-    border-radius: var(--radius);
-    background: var(--surface-muted);
-    color: var(--fg);
-    font: 500 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-    cursor: pointer;
-    white-space: nowrap;
+  /* ---------- controls ---------- */
+  .controls-wrap {
+    position: relative; flex: 1; min-height: 240px; margin-top: 16px;
+    display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 10px;
   }
-  .btn:hover, .you-row button:hover, .you-status button:hover { background: #eef1f4; }
-  .you-row button.primary {
-    background: var(--success); border-color: var(--border-strong); color: #fff; font-weight: 600;
+  .controls {
+    position: relative; width: 100%; flex: none; display: flex; align-items: flex-end; justify-content: space-between; gap: 10px;
+    padding-bottom: 10px;
   }
-  .you-row button.primary:hover { background: #1a7f37; }
+  .stack { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 
-  input[type="text"], input[type="password"], input[type="number"] {
-    padding: 6px 12px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--surface);
-    color: var(--fg);
-    font: 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-  }
-  input:focus {
-    outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(9,105,218,.25);
+  /* these sit straight on the photo, which is dark at the bottom */
+  .stick-label {
+    font-size: 11px; font-weight: 700; letter-spacing: .04em;
+    color: #fff; text-shadow: 0 1px 4px rgba(0,20,41,.6);
   }
 
-  .you-row { display: flex; gap: 8px; margin-top: 16px; }
-  .you-row input { flex: 1; min-width: 0; }
-  .you-status {
-    display: flex; justify-content: space-between; align-items: center; gap: 12px;
-    margin-top: 16px; font-size: 14px; color: var(--fg-muted);
-  }
-  .you-status .msg b { color: var(--fg); font-weight: 600; }
-  .you-status.flying .msg b { color: var(--success); }
-
-  .admin-flying-note {
-    margin-top: 12px; padding: 8px 12px;
-    border: 1px solid #f0d3a0; border-radius: var(--radius); background: #fff8e6;
-    font-size: 13px; color: #7d4e00;
-  }
-
-  /* ---------- sticks ---------- */
-  .sticks-note {
-    margin: 0 0 10px; text-align: center; font-size: 13px; color: var(--fg-muted);
-  }
-  .sticks {
-    display: flex; gap: 12px; justify-content: center; align-items: flex-start; flex-wrap: wrap;
-    -webkit-user-select: none; user-select: none;
-  }
-  .stick-box {
-    padding: 14px;
-    border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface);
-    display: flex; flex-direction: column; align-items: center; gap: 10px;
-  }
-  .stick-label { font-size: 12px; font-weight: 600; color: var(--fg-muted); }
-
-  .pad {
-    position: relative;
-    background: var(--surface-muted);
-    border: 1px solid var(--border);
+  /* drive joystick */
+  #padDrive {
+    position: relative; flex: none; width: 112px; height: 112px; border-radius: 50%;
+    background:
+      linear-gradient(168deg, rgba(255,255,255,.5), rgba(255,255,255,.05) 46%),
+      rgba(23,153,89,.62);
+    border: 1.5px solid rgba(255,255,255,.75);
+    -webkit-backdrop-filter: blur(18px) saturate(180%); backdrop-filter: blur(18px) saturate(180%);
+    box-shadow:
+      0 12px 28px -8px rgba(0,50,34,.5),
+      inset 0 2px 0 rgba(255,255,255,.7),
+      inset 0 -10px 18px rgba(0,60,40,.22);
     touch-action: none; cursor: grab; overflow: hidden;
   }
-  .pad:active { cursor: grabbing; }
-  #padDrive { width: 168px; height: 168px; border-radius: 50%; }
-  #padLift  { width: 72px;  height: 168px; border-radius: var(--radius); }
-
-  .pad .ring, .pad .ring2 { position: absolute; border: 1px solid #e4e8ec; border-radius: 50%; pointer-events: none; }
-  .pad .ring  { inset: 16%; }
-  .pad .ring2 { inset: 33%; }
-  .pad .guide { position: absolute; background: #e4e8ec; pointer-events: none; }
-  .guide.h { left: 8%; right: 8%; top: 50%; height: 1px; }
-  .guide.v { top: 8%; bottom: 8%; left: 50%; width: 1px; }
-
-  .knob {
-    position: absolute; left: 50%; top: 50%;
-    width: 54px; height: 54px; margin: -27px 0 0 -27px; border-radius: 50%;
-    background: var(--surface); border: 1px solid #c2c9d1;
-    box-shadow: 0 1px 3px rgba(31,35,40,.16); pointer-events: none;
+  #padDrive::before {
+    content: ''; position: absolute; left: 50%; top: 50%; width: 90px; height: 90px;
+    margin: -45px 0 0 -45px; border-radius: 50%;
+    background: rgba(51,217,140,.5);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.5);
   }
-  .knob::after {
-    content: ''; position: absolute; left: 50%; top: 50%;
-    width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%; background: #8c959f;
+  #padDrive .shine {
+    position: absolute; left: 18px; top: 14px; width: 30px; height: 16px; border-radius: 50%;
+    background: rgba(255,255,255,.45); pointer-events: none;
   }
-  #padLift .knob { width: 56px; height: 34px; margin: -17px 0 0 -28px; border-radius: 17px; }
-  .pad.live .knob { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(9,105,218,.18); }
-  .pad.live .knob::after { background: var(--accent); }
-
-  .readout { font-size: 13px; color: var(--fg-muted); font-variant-numeric: tabular-nums; white-space: pre; }
-  .readout b { color: var(--fg); font-weight: 600; }
-  .hint { font-size: 11px; color: #8c959f; }
-
-  /* ---------- lock / admin override ---------- */
-  .sticks.locked, .manual.locked, #stop.locked { opacity: .45; pointer-events: none; }
-  .sticks-wrap { position: relative; }
-  .sticks.admin-flying { pointer-events: none; }
-
-  /* Grey veil with ADMIN CONTROL knocked out of it: the letters are holes
-     onto the pane below, and the veil is what fades. */
-  .admin-overlay { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
-  .admin-overlay .veil {
-    display: block; width: 100%; height: 100%;
-    animation: adminVeil 1.9s ease-in-out infinite;
+  #knobDrive {
+    position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px;
+    border-radius: 50%; pointer-events: none;
+    background: linear-gradient(168deg, rgba(255,255,255,.95), rgba(255,255,255,.62));
+    border: 1px solid rgba(255,255,255,.95);
+    -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+    box-shadow: 0 6px 14px rgba(0,20,41,.3), inset 0 1px 0 #fff, inset 0 -3px 6px rgba(0,20,41,.06);
   }
-  .admin-overlay text {
-    font: 700 54px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-    letter-spacing: -1.5px;
-  }
-  @keyframes adminVeil { 0%, 100% { opacity: .88; } 50% { opacity: 0; } }
 
-  /* ---------- emergency stop ---------- */
+  /* altitude slider */
+  #padLift {
+    position: relative; flex: none; width: 56px; height: 210px; border-radius: 28px;
+    background:
+      linear-gradient(168deg, rgba(255,255,255,.62), rgba(255,255,255,.14) 44%, rgba(255,255,255,.3)),
+      rgba(255,255,255,.24);
+    border: 1px solid rgba(255,255,255,.7);
+    -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
+    box-shadow:
+      0 12px 28px -8px rgba(0,20,41,.36),
+      inset 0 1px 0 rgba(255,255,255,.95),
+      inset 0 -1px 0 rgba(255,255,255,.4);
+    touch-action: none; cursor: grab; overflow: hidden;
+  }
+  #padLift .tick {
+    position: absolute; left: 50%; margin-left: -7px; width: 0; height: 0;
+    border-left: 7px solid transparent; border-right: 7px solid transparent;
+    pointer-events: none;
+  }
+  #padLift .tick.up   { top: 12px;    border-bottom: 10px solid rgba(28,38,48,.35); }
+  #padLift .tick.down { bottom: 12px; border-top: 10px solid rgba(28,38,48,.35); }
+  #knobLift {
+    position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px;
+    border-radius: 50%; pointer-events: none;
+    background: linear-gradient(168deg, rgba(255,255,255,.45), rgba(255,255,255,0) 50%), rgba(255,122,69,.88);
+    border: 2px solid rgba(255,255,255,.9);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    box-shadow: 0 6px 16px -4px rgba(140,50,10,.5), inset 0 1px 0 rgba(255,255,255,.8);
+  }
+  #knobLift::after {
+    content: ''; position: absolute; left: 50%; top: 8px; width: 16px; height: 10px;
+    margin-left: -8px; border-radius: 50%; background: rgba(255,255,255,.5);
+  }
+  .readout {
+    font-size: 12px; font-weight: 700; white-space: nowrap;
+    color: #fff; text-shadow: 0 1px 4px rgba(0,20,41,.6);
+  }
+  .readout b { margin: 0 6px 0 2px; }
+  .readout b:last-child { margin-right: 0; }
+
+  /* emergency stop sits in the gap between the two controls */
   #stop {
-    display: block; width: 100%; margin: 16px 0 0; padding: 12px;
-    border: 1px solid var(--border-strong); border-radius: var(--radius);
-    background: var(--danger); color: #fff;
-    font: 600 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-    cursor: pointer;
+    flex: 0 1 auto; min-width: 0; margin-bottom: 44px; max-width: 132px;
+    padding: 13px 16px; border-radius: 18px; cursor: pointer; line-height: 1.25;
+    background: var(--danger); border: 1px solid rgba(255,255,255,.55); color: #fff;
+    font: 700 13px "Inter", system-ui, sans-serif;
+    box-shadow: 0 8px 22px -6px rgba(180,20,30,.55);
   }
-  #stop:hover { background: #a40e26; }
+  #stop:active { background: #c62a2f; }
 
-  /* ---------- telemetry ---------- */
+  .controls.locked { opacity: .45; }
+  .controls.locked #padDrive, .controls.locked #padLift { pointer-events: none; }
+  #stop.locked { opacity: .45; pointer-events: none; }
+  .controls.admin-flying { pointer-events: none; }
+
+  /* grey veil with ADMIN CONTROL knocked out of it: the letters are holes
+     onto the controls below, and the veil is what fades. */
+  .admin-overlay { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+  .admin-overlay .veil { display: block; width: 100%; height: 100%; animation: adminVeil 1.9s ease-in-out infinite; }
+  .admin-overlay text {
+    font: 700 34px/1 "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif; letter-spacing: -1px;
+  }
+  @keyframes adminVeil { 0%, 100% { opacity: .82; } 50% { opacity: 0; } }
+
+  .spectating {
+    z-index: 2; padding: 6px 14px; border-radius: 14px; max-width: 100%; text-align: center;
+    background: rgba(255,255,255,.6); border: 1px solid rgba(255,255,255,.8);
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+    font-size: 11px; font-weight: 600; color: rgba(38,51,64,.9);
+  }
+
+  /* ---------- footer ---------- */
+  .footer {
+    margin-top: auto; margin-bottom: max(12px, env(safe-area-inset-bottom));
+    padding: 10px 14px; min-height: 52px; border-radius: 22px;
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  .footer .left { font-size: 11px; font-weight: 600; color: rgba(51,66,82,.85); }
+  .footer .left button {
+    background: none; border: none; padding: 0; cursor: pointer;
+    font: 600 11px "Inter", system-ui, sans-serif; color: rgba(51,66,82,.85); text-decoration: underline;
+  }
+  .donate {
+    padding: 6px 12px; border-radius: 14px; border: none; cursor: pointer;
+    background: var(--orange); color: #fff; font: 700 11px "Inter", system-ui, sans-serif;
+    text-decoration: none; display: inline-block;
+  }
+
+  /* ---------- status + admin ---------- */
   .status {
-    margin-top: 16px; padding: 12px 16px;
-    border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface);
-    display: grid; gap: 4px;
-    font: 12px ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
-    color: var(--fg-muted);
+    margin-top: 10px; padding: 9px 14px; border-radius: 14px;
+    display: grid; gap: 3px; font-size: 11px; color: rgba(51,66,82,.85);
   }
+  .dot {
+    display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    background: rgba(28,38,48,.3); margin-right: 6px; vertical-align: middle;
+  }
+  .dot.on { background: var(--green); box-shadow: 0 0 6px rgba(41,199,128,.7); }
 
-  /* ---------- admin ---------- */
   .admin-toggle {
-    display: block; margin: 20px auto 0; padding: 5px 12px;
-    border: 1px solid var(--border); border-radius: var(--radius);
-    background: transparent; color: var(--fg-muted);
-    font: 13px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-    cursor: pointer;
+    display: block; margin: 10px auto 16px; padding: 5px 12px; border-radius: 12px; cursor: pointer;
+    background: rgba(255,255,255,.45); border: 1px solid rgba(255,255,255,.7);
+    font: 600 11px "Inter", system-ui, sans-serif; color: rgba(51,66,82,.85);
   }
-  .admin-toggle:hover { background: var(--surface); }
-
-  .admin-panel {
-    margin: 12px 0 0;
-    border: 1px solid var(--border); border-radius: var(--radius);
-    background: var(--surface); overflow: hidden;
-  }
+  .admin-panel { margin: 0 0 16px; border-radius: 18px; overflow: hidden; }
   .admin-panel h2 {
-    margin: 0; padding: 10px 16px;
-    background: var(--surface-muted); border-bottom: 1px solid var(--border);
-    font-size: 13px; font-weight: 600;
+    margin: 0; padding: 10px 14px; border-bottom: 1px solid rgba(26,38,51,.08);
+    font-size: 11px; font-weight: 700; color: rgba(38,51,64,.9);
   }
-  .admin-login { display: flex; gap: 8px; padding: 16px; }
-  .admin-login input { flex: 1; min-width: 0; }
-  .admin-error { margin: 0 16px 16px; font-size: 13px; color: var(--danger); }
+  .admin-login { display: flex; gap: 8px; padding: 12px 14px; }
+  .admin-login input {
+    flex: 1; min-width: 0; padding: 9px 12px; border-radius: 12px;
+    background: rgba(255,255,255,.7); border: 1px solid rgba(255,255,255,.85);
+    font: 13px "Inter", system-ui, sans-serif; color: var(--ink);
+  }
+  .admin-login input:focus { outline: none; border-color: var(--green); }
+  .admin-error { margin: 0; padding: 0 14px 12px; font-size: 12px; font-weight: 600; color: var(--danger); }
 
   .admin-list { list-style: none; margin: 0; padding: 0; }
   .admin-list li {
-    display: flex; justify-content: space-between; align-items: center; gap: 12px;
-    padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 14px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 9px 14px; border-bottom: 1px solid rgba(26,38,51,.08); font-size: 13px;
   }
   .admin-list .remove {
-    padding: 3px 10px;
-    border: 1px solid rgba(207,34,46,.3); border-radius: var(--radius);
-    background: var(--surface); color: var(--danger);
-    font: 500 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-    cursor: pointer;
+    padding: 4px 10px; border-radius: 10px; cursor: pointer;
+    background: rgba(255,255,255,.6); border: 1px solid rgba(229,72,77,.4); color: var(--danger);
+    font: 700 11px "Inter", system-ui, sans-serif;
   }
-  .admin-list .remove:hover { background: var(--danger); color: #fff; }
-  .admin-control { padding: 16px; }
-  .admin-control button.taking { background: var(--danger); color: #fff; border-color: var(--border-strong); }
+  .admin-control { padding: 12px 14px; }
+  .admin-control button.taking { background: var(--danger); border-color: rgba(255,255,255,.6); color: #fff; }
 
-  .manual { padding: 0 16px 16px; }
-  .manual h2 {
-    margin: 0 0 12px; padding: 0; background: none; border: none;
-    font-size: 12px; font-weight: 600; color: var(--fg-muted);
+  .manual { padding: 0 14px 14px; }
+  .manual h2 { padding: 0 0 8px; border: none; font-size: 11px; color: var(--ink-muted); }
+  .mrow { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
+  .mrow label { width: 46px; font-size: 12px; font-weight: 600; color: var(--ink-muted); }
+  .mrow input {
+    flex: 1; min-width: 0; padding: 7px 10px; border-radius: 10px;
+    background: rgba(255,255,255,.7); border: 1px solid rgba(255,255,255,.85);
+    font: 12px "Inter", system-ui, sans-serif; color: var(--ink);
   }
-  .mrow { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .mrow label { width: 52px; font-size: 13px; color: var(--fg-muted); }
-  .mrow input { flex: 1; min-width: 0; }
-  #send { width: 100%; margin-top: 4px; }
+  #send {
+    width: 100%; margin-top: 4px; padding: 9px; border-radius: 12px; cursor: pointer;
+    background: rgba(255,255,255,.6); border: 1px solid rgba(255,255,255,.85);
+    font: 700 12px "Inter", system-ui, sans-serif; color: rgba(38,51,64,.9);
+  }
+  .manual.locked { opacity: .45; pointer-events: none; }
 
   @media (max-width: 360px) {
-    #padDrive { width: 150px; height: 150px; }
-    #padLift  { width: 64px;  height: 150px; }
-    #padLift .knob { width: 50px; height: 30px; margin: -15px 0 0 -25px; }
-    .admin-overlay text { font-size: 46px; }
+    body { padding: 0 14px; }
+    .controls { gap: 6px; }
+    #stop { padding: 11px 10px; font-size: 12px; }
+  }
+
+  @media (max-height: 720px) {
+    .controls-wrap { min-height: 226px; }
+    #padLift { height: 182px; }
+    .lbl-alt { bottom: 188px; }
   }
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <h1>Olin's Community Blimp</h1>
-  <p class="site-status"><span class="dot" id="dot"></span><span id="statusText">Connecting…</span></p>
+  <div class="masthead">
+    <h1 class="wordmark">flyolin.lol</h1>
+    <button class="info-btn" id="infoBtn" aria-label="How it works">i</button>
+  </div>
 
-  <details class="howto">
-    <summary>Join the queue to fly the blimp</summary>
+  <details class="howto glass" id="howto">
+    <summary>Take turns flying a real blimp — 90 sec per turn</summary>
     <ul>
       <li>When nobody is queued, the blimp idles or an admin flies it.</li>
       <li>Enter your name, join the queue, and wait your turn.</li>
-      <li><b>Keep this page open</b> on your phone &mdash; close it and you lose your spot.</li>
+      <li><b>Keep this page open</b> on your phone — close it and you lose your spot.</li>
       <li>When it is your turn you get <b>90 seconds</b> of flying time.</li>
       <li>An admin can take control at any time, so fly responsibly.</li>
     </ul>
   </details>
 
-  <div class="box">
-    <p class="cap">Now flying</p>
-    <div class="box-body">
-    <div class="now-flying empty" id="nowFlying">Nobody flying</div>
-    <div class="progress" id="seg"><i></i></div>
-    <div class="admin-flying-note" id="adminFlyingNote" hidden>Admin has taken control</div>
+  <div class="queue-card glass">
+    <div class="now-row empty" id="nowRow">
+      <span class="fill" id="nowFill"></span>
+      <span class="avatar" id="nowAvatar" hidden></span>
+      <span class="who">
+        <span class="nm" id="nowName">Nobody flying</span>
+        <span class="sub" id="nowSub">The blimp is idle</span>
+      </span>
+      <span class="left" id="nowLeft"></span>
+    </div>
 
-    <div class="qhead"><span>#</span><span>Up next</span><span>Starts in</span></div>
     <ul class="up-next" id="upNext"></ul>
 
-    <div class="you-row" id="joinRow">
+    <div class="join-row" id="joinRow">
       <input id="usernameInput" type="text" maxlength="24" placeholder="Your name">
-      <button class="primary" id="joinBtn">Join queue</button>
+      <button class="btn go" id="joinBtn">Join queue</button>
     </div>
     <div class="you-status" id="youStatus" hidden>
       <span class="msg" id="youMsg"></span>
-      <button id="leaveBtn">Leave</button>
+      <button class="btn" id="leaveBtn">Leave</button>
     </div>
-    <div class="admin-flying-note" id="removedNote" hidden>You were removed by the admin</div>
-    </div>
+
+    <p class="note" id="adminFlyingNote" hidden>Admin has taken control</p>
+    <p class="note" id="removedNote" hidden>You were removed by the admin</p>
   </div>
 
-  <div class="sticks-note" id="sticksNote" hidden>Spectating &mdash; join the queue to fly</div>
+  <div class="controls-wrap">
+    <span class="spectating" id="sticksNote" hidden>Spectating — join the queue to fly</span>
 
-  <div class="sticks-wrap">
-  <div class="sticks" id="sticks">
-    <div class="stick-box">
-      <div class="stick-label">Drive</div>
-      <div class="pad" id="padDrive">
-        <div class="guide h"></div>
-        <div class="guide v"></div>
-        <div class="ring"></div>
-        <div class="ring2"></div>
-        <div class="knob" id="knobDrive"></div>
+    <div class="controls" id="controls">
+      <div class="stack">
+        <span class="stick-label">JOYSTICK</span>
+        <div class="pad" id="padDrive">
+          <span class="shine"></span>
+          <span id="knobDrive"></span>
+        </div>
+        <span class="readout" id="roDrive">L <b>0</b>  R <b>0</b></span>
       </div>
-      <div class="readout" id="roDrive">L <b>0</b>   R <b>0</b></div>
-      <div class="hint">W A S D</div>
-    </div>
 
-    <div class="stick-box">
-      <div class="stick-label">Altitude</div>
-      <div class="pad" id="padLift">
-        <div class="guide h"></div>
-        <div class="knob" id="knobLift"></div>
+      <button id="stop">Emergency stop</button>
+
+      <div class="stack">
+        <span class="stick-label">ALT</span>
+        <div class="pad" id="padLift">
+          <span class="tick up"></span>
+          <span class="tick down"></span>
+          <span id="knobLift"></span>
+        </div>
+        <span class="readout" id="roLift">Lift <b>0</b>%</span>
       </div>
-      <div class="readout" id="roLift">U <b>0</b></div>
-      <div class="hint">&uarr; &darr;</div>
-    </div>
-  </div>
-    <div class="admin-overlay" id="adminOverlay" hidden>
+
+      <div class="admin-overlay" id="adminOverlay" hidden>
       <svg class="veil" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <mask id="adminKnockout">
@@ -400,34 +464,42 @@
             <text x="50%" y="72%" fill="#000" text-anchor="middle" dominant-baseline="middle">CONTROL</text>
           </mask>
         </defs>
-        <rect width="100%" height="100%" fill="#9a9fa2" mask="url(#adminKnockout)"/>
+        <rect width="100%" height="100%" fill="#8a97a3" mask="url(#adminKnockout)"/>
       </svg>
+      </div>
     </div>
   </div>
 
-  <button id="stop">Emergency stop</button>
+  <div class="footer glass">
+    <span class="left">flyolin.lol · <button id="aboutBtn">About</button></span>
+    <a class="donate" id="donateBtn" href="#">Donate</a>
+  </div>
 
-  <div class="status">
+</div>
+
+<div class="extras">
+  <div class="status glass">
+    <div><span class="dot" id="dot"></span><span id="statusText">Connecting…</span></div>
     <div id="depth">Command queue: idle</div>
-    <div id="state">Device state: &mdash;</div>
+    <div id="state">Device state: —</div>
   </div>
 
   <button class="admin-toggle" id="adminToggle">Admin</button>
 
-  <div class="admin-panel" id="adminLoginPanel" hidden>
+  <div class="admin-panel glass" id="adminLoginPanel" hidden>
     <h2>Admin login</h2>
     <div class="admin-login">
       <input id="adminPassword" type="password" placeholder="Password">
-      <button id="adminLoginBtn">Log in</button>
+      <button class="btn" id="adminLoginBtn">Log in</button>
     </div>
-    <div class="admin-error" id="adminError" hidden>Wrong password</div>
+    <p class="admin-error" id="adminError" hidden>Wrong password</p>
   </div>
 
-  <div class="admin-panel" id="adminPanel" hidden>
+  <div class="admin-panel glass" id="adminPanel" hidden>
     <h2>Admin</h2>
     <ul class="admin-list" id="adminList"></ul>
     <div class="admin-control">
-      <button id="adminControlBtn">Take control</button>
+      <button class="btn" id="adminControlBtn">Take control</button>
     </div>
 
     <div class="manual" id="manual">
@@ -438,7 +510,6 @@
       <button id="send">Send all</button>
     </div>
   </div>
-
 </div>
 
 <script>
@@ -456,7 +527,7 @@ function connect() {
   ws.onclose = () => {
     lastMsg = null;                       // board zeroes on drop, so resend
     dot.classList.remove('on');
-    statusText.textContent = 'Disconnected \u2014 reconnecting\u2026';
+    statusText.textContent = 'Disconnected — reconnecting…';
     setTimeout(connect, 2000);
   };
 
@@ -466,7 +537,7 @@ function connect() {
     if (m.type === 'status') {
       dot.classList.toggle('on', m.deviceOnline);
       statusText.textContent = (m.deviceOnline ? 'Blimp online' : 'Blimp offline')
-        + ' \u00b7 ' + m.users + (m.users === 1 ? ' person here' : ' people here');
+        + ' · ' + m.users + (m.users === 1 ? ' person here' : ' people here');
 
       // The board zeroes its speeds whenever it drops, but our socket stayed
       // up, so we still think the last command is in force and would send
@@ -509,66 +580,82 @@ connect();
 function send(text) {
   if (ws && ws.readyState === 1) ws.send(text);
 }
-
 function sendJson(obj) { send(JSON.stringify(obj)); }
 
 // ---------------- flight queue ----------------
 // 'stop' is a built-in Window method, so the id-as-global shortcut doesn't reach the button.
 const stopBtn = document.getElementById('stop');
-let latestQueue = { current: null, waiting: [], adminFlying: false };
+let latestQueue = { current: null, waiting: [], adminFlying: false, turnMs: 90000 };
 let latestYou = { state: 'idle', canControl: false, isAdmin: false };
 let removedNoteTimer = null;
+
+const AVATARS = ['#b34af2', '#4fc4f5', '#ffb833', '#33c7b3', '#f273a6', '#7a6cf0', '#38b2f0', '#e0654f'];
+function avatarColor(name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  return AVATARS[h % AVATARS.length];
+}
+function paintAvatar(el, name, isYou) {
+  el.hidden = false;
+  el.style.background = isYou ? '#ff7a45' : avatarColor(name);
+  el.textContent = name.trim().charAt(0).toUpperCase();
+}
 
 function fmtTime(ms) {
   const s = Math.max(0, Math.round(ms / 1000));
   return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
 }
-
-// Countdown as a progress bar; the last quarter runs amber.
-function renderProgress() {
-  const c = latestQueue.current;
-  const pct = c ? Math.max(0, Math.min(100, c.msLeft / latestQueue.turnMs * 100)) : 0;
-  seg.firstElementChild.style.width = pct + '%';
-  seg.classList.toggle('low', !!c && pct <= 25);
-  seg.classList.toggle('paused', !!(c && c.paused));
+// The design reads "~2 min wait"; under a minute that would round to a useless "~0 min".
+function fmtWait(ms) {
+  const s = Math.max(0, Math.round(ms / 1000));
+  return s < 60 ? '~' + s + ' sec wait' : '~' + Math.round(s / 60) + ' min wait';
 }
 
 function renderQueue() {
   const q = latestQueue;
-  nowFlying.classList.toggle('empty', !q.current);
-  nowFlying.textContent = '';
+  const youFlying = latestYou.state === 'flying';
+
+  nowRow.classList.toggle('empty', !q.current);
   if (q.current) {
-    const name = document.createElement('span');
-    name.textContent = q.current.username;
-    const time = document.createElement('span');
-    time.className = 'time';
-    time.textContent = (q.current.paused ? 'Paused \u00b7 ' : '') + fmtTime(q.current.msLeft);
-    nowFlying.append(name, time);
+    paintAvatar(nowAvatar, youFlying ? 'You' : q.current.username, youFlying);
+    nowName.textContent = youFlying ? 'You' : q.current.username;
+    nowSub.textContent = q.current.paused ? 'Paused — admin flying' : 'Flying now';
+    nowLeft.textContent = fmtTime(q.current.msLeft) + ' left';
+    nowFill.style.width = Math.max(0, Math.min(100, q.current.msLeft / q.turnMs * 100)) + '%';
   } else {
-    nowFlying.textContent = 'Nobody flying';
+    nowAvatar.hidden = true;
+    nowName.textContent = 'Nobody flying';
+    nowSub.textContent = 'The blimp is idle';
+    nowLeft.textContent = '';
+    nowFill.style.width = '0%';
   }
   adminFlyingNote.hidden = !q.adminFlying;
-  renderProgress();
 
   upNext.innerHTML = '';
   if (!q.waiting.length) {
     const li = document.createElement('li');
     li.className = 'empty';
-    li.textContent = 'Nobody waiting \u2014 join to fly now';
+    li.textContent = q.current ? 'Nobody else waiting' : 'Nobody waiting — join to fly now';
     upNext.appendChild(li);
   } else {
+    const mine = latestYou.state === 'waiting' ? latestYou.position : null;
     q.waiting.forEach((e, i) => {
+      const isMe = mine === i + 1;
       const li = document.createElement('li');
-      const pos = document.createElement('span');
-      pos.className = 'pos';
-      pos.textContent = i + 1;
+      if (isMe) li.className = 'me';
+      const av = document.createElement('span');
+      av.className = 'avatar';
+      paintAvatar(av, isMe ? 'You' : e.username, isMe);
       const nm = document.createElement('span');
       nm.className = 'nm';
-      nm.textContent = e.username;
-      const eta = document.createElement('span');
-      eta.className = 'eta';
-      eta.textContent = '~' + fmtTime(e.msLeft);
-      li.append(pos, nm, eta);
+      nm.textContent = isMe ? 'You' : e.username;
+      const wait = document.createElement('span');
+      wait.className = 'wait';
+      wait.textContent = fmtWait(e.msLeft);
+      const badge = document.createElement('span');
+      badge.className = 'badge';
+      badge.textContent = '#' + (i + 1);
+      li.append(av, nm, wait, badge);
       upNext.appendChild(li);
     });
   }
@@ -581,23 +668,22 @@ function renderYou() {
 
   joinRow.hidden = y.state !== 'idle';
   youStatus.hidden = y.state === 'idle';
-  youStatus.classList.toggle('flying', y.state === 'flying');
 
   if (y.state === 'flying') {
     const b = document.createElement('b');
-    b.textContent = 'Your turn: ' + fmtTime(y.msLeft);
+    b.textContent = 'Your turn — ' + fmtTime(y.msLeft) + ' left';
     youMsg.innerHTML = '';
     youMsg.appendChild(b);
   } else if (y.state === 'waiting') {
     const b = document.createElement('b');
     b.textContent = '#' + y.position;
     youMsg.textContent = "You're ";
-    youMsg.append(b, document.createTextNode(' — starts in ~' + fmtTime(y.msLeft)));
+    youMsg.append(b, document.createTextNode(' — starts in ' + fmtTime(y.msLeft)));
   }
 
   const adminHasControl = latestQueue.adminFlying && !y.canControl;
-  sticks.classList.toggle('locked', !y.canControl && !adminHasControl);
-  sticks.classList.toggle('admin-flying', adminHasControl);
+  controls.classList.toggle('locked', !y.canControl && !adminHasControl);
+  controls.classList.toggle('admin-flying', adminHasControl);
   adminOverlay.hidden = !adminHasControl;
   manual.classList.toggle('locked', !y.canControl);
   stopBtn.classList.toggle('locked', !y.canControl);
@@ -608,8 +694,11 @@ function renderYou() {
     adminLoginPanel.hidden = true;
     adminPanel.hidden = false;
   }
-  adminControlBtn.textContent = (y.isAdmin && y.canControl && latestQueue.adminFlying) ? 'Release control' : 'Take control';
-  adminControlBtn.classList.toggle('taking', y.isAdmin && y.canControl && latestQueue.adminFlying);
+  const overriding = y.isAdmin && y.canControl && latestQueue.adminFlying;
+  adminControlBtn.textContent = overriding ? 'Release control' : 'Take control';
+  adminControlBtn.classList.toggle('taking', overriding);
+
+  renderQueue();   // whether a row reads "You" depends on your own state
 }
 
 function renderAdminList() {
@@ -658,6 +747,10 @@ addEventListener('beforeunload', e => {
   e.returnValue = '';
 });
 
+// ---------------- info / about ----------------
+infoBtn.onclick = () => { howto.open = !howto.open; };
+aboutBtn.onclick = () => { howto.open = true; howto.scrollIntoView({ behavior: 'smooth', block: 'start' }); };
+
 // ---------------- admin ----------------
 adminToggle.onclick = () => {
   adminLoginPanel.hidden = !adminLoginPanel.hidden;
@@ -677,7 +770,7 @@ adminControlBtn.onclick = () => {
 
 // ---------------- control state ----------------
 // Every input funnels into these, all normalised to -1..1.
-const drivePtr = { x: 0, y: 0 };     // pointer on the left pad
+const drivePtr = { x: 0, y: 0 };     // pointer on the joystick
 const driveKey = { x: 0, y: 0 };     // WASD
 let liftPtr = 0, liftKey = 0;
 
@@ -702,16 +795,14 @@ function paint() {
   const [l, r, u] = motors();
   const v = driveVec();
 
-  const R = padDrive.clientWidth / 2 - 34;
+  const R = padDrive.clientWidth / 2 - 23;
   knobDrive.style.transform = 'translate(' + (v.x * R) + 'px,' + (-v.y * R) + 'px)';
-  padDrive.classList.toggle('live', v.x !== 0 || v.y !== 0);
 
-  const H = padLift.clientHeight / 2 - 27;
+  const H = padLift.clientHeight / 2 - 26;
   knobLift.style.transform = 'translate(0,' + (-liftVal() * H) + 'px)';
-  padLift.classList.toggle('live', liftVal() !== 0);
 
-  roDrive.innerHTML = 'L <b>' + l + '</b>   R <b>' + r + '</b>';
-  roLift.innerHTML = 'U <b>' + u + '</b>';
+  roDrive.innerHTML = 'L <b>' + l + '</b> R <b>' + r + '</b>';
+  roLift.innerHTML = 'Lift <b>' + u + '</b>%';
 }
 
 // Throttled transmit: the sticks move continuously, the link need not.
@@ -849,7 +940,7 @@ function sendManual() {
 document.getElementById('send').onclick = sendManual;
 
 // ---------------- stop ----------------
-document.getElementById('stop').onclick = () => {
+stopBtn.onclick = () => {
   drivePtr.x = drivePtr.y = 0;
   driveKey.x = driveKey.y = 0;
   liftPtr = liftKey = 0;
