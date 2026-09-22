@@ -40,7 +40,9 @@
   /* sky sits behind everything so the glass has something to diffuse */
   body::before {
     content: ''; position: fixed; inset: 0; z-index: -1;
-    background: #9db6cc url('sky.jpg') center/cover no-repeat;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0) 38%, rgba(255,255,255,.34)),
+      #9db6cc url('sky.jpg') center/cover no-repeat;
   }
 
   .wrap {
@@ -54,14 +56,14 @@
      background, a bright top rim and a soft float shadow */
   .glass {
     background:
-      linear-gradient(168deg, rgba(255,255,255,.58), rgba(255,255,255,.14) 44%, rgba(255,255,255,.30)),
-      rgba(255,255,255,.26);
-    border: 1px solid rgba(255,255,255,.68);
-    -webkit-backdrop-filter: blur(24px) saturate(180%); backdrop-filter: blur(24px) saturate(180%);
+      linear-gradient(168deg, rgba(255,255,255,.45), rgba(255,255,255,.08) 46%, rgba(255,255,255,.22)),
+      rgba(255,255,255,.22);
+    border: 1px solid rgba(255,255,255,.55);
+    -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%);
     box-shadow:
-      0 10px 30px -8px rgba(0,20,41,.34),
-      inset 0 1px 0 rgba(255,255,255,.95),
-      inset 0 -1px 0 rgba(255,255,255,.4);
+      0 10px 30px -8px rgba(0,20,41,.28),
+      inset 0 1px 0 rgba(255,255,255,.85),
+      inset 0 -1px 0 rgba(255,255,255,.3);
   }
 
   /* ---------- masthead ---------- */
@@ -105,16 +107,17 @@
   }
   .now-row .fill {
     position: absolute; left: 0; top: 0; bottom: 0; width: 0;
-    background: rgba(41,199,128,.62); transition: width .4s linear;
+    background: rgba(255,255,255,.5); border-right: 2px solid rgba(255,255,255,.95);
+    transition: width .4s linear;
   }
   .now-row > *:not(.fill) { position: relative; }
   .now-row .who { flex: 1; min-width: 0; }
   .now-row .nm {
-    display: block; font-size: 13px; font-weight: 700; color: #fff;
+    display: block; font-size: 13px; font-weight: 700; color: var(--ink);
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .now-row .sub { display: block; font-size: 9px; font-weight: 600; color: rgba(255,255,255,.85); }
-  .now-row .left { font-size: 14px; font-weight: 700; color: #fff; white-space: nowrap; }
+  .now-row .sub { display: block; font-size: 9px; font-weight: 600; color: var(--ink-muted); }
+  .now-row .left { font-size: 14px; font-weight: 700; color: var(--ink); white-space: nowrap; }
   /* nobody flying: no green fill behind, so ink instead of white */
   .now-row.empty .nm { color: var(--ink); font-weight: 600; }
   .now-row.empty .sub { color: var(--ink-muted); }
@@ -122,10 +125,13 @@
 
   .avatar {
     flex: none; width: 24px; height: 24px; border-radius: 50%;
-    border: 1px solid #fff; background: #b34af2;
+    border: 1px solid rgba(255,255,255,.8);
+    background: linear-gradient(168deg, rgba(255,255,255,.65), rgba(255,255,255,.22));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
     display: grid; place-items: center;
-    font-size: 10px; font-weight: 700; color: rgba(255,255,255,.95);
+    font-size: 10px; font-weight: 700; color: var(--ink-soft);
   }
+  .avatar.you { border-color: #fff; background: rgba(255,255,255,.8); color: var(--ink); }
   .now-row .avatar { width: 32px; height: 32px; font-size: 12px; }
 
   .up-next { list-style: none; margin: 0; padding: 0; }
@@ -140,9 +146,10 @@
   .up-next .wait { font-size: 11px; font-weight: 600; color: var(--ink-muted); white-space: nowrap; }
   .up-next .badge {
     flex: none; min-width: 26px; padding: 3px 6px; border-radius: 9px; text-align: center;
-    background: rgba(255,255,255,.6); font-size: 10px; font-weight: 700; color: var(--green-ink);
+    background: rgba(255,255,255,.55); border: 1px solid rgba(255,255,255,.7);
+    font-size: 10px; font-weight: 700; color: var(--ink-soft);
   }
-  .up-next li.me .nm { color: var(--green-deep); }
+  .up-next li.me .nm { font-weight: 700; }
   .up-next li.empty { justify-content: center; font-size: 12px; color: var(--ink-muted); padding: 12px 14px; }
 
   /* ---------- join / your status ---------- */
@@ -164,15 +171,19 @@
     border: 1px solid rgba(255,255,255,.85); background: rgba(255,255,255,.6);
     font: 700 12px "Inter", system-ui, sans-serif; color: rgba(38,51,64,.9);
   }
-  .btn.go { background: var(--green); border-color: rgba(255,255,255,.6); color: #fff; }
-  .btn.go:active { background: var(--green-deep); }
+  .btn.go {
+    background: linear-gradient(168deg, rgba(255,255,255,.75), rgba(255,255,255,.35));
+    border-color: rgba(255,255,255,.9); color: var(--ink);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.95), 0 4px 12px -4px rgba(0,20,41,.25);
+  }
+  .btn.go:active { background: rgba(255,255,255,.5); }
 
   .you-status .msg { flex: 1; min-width: 0; font-size: 12px; font-weight: 600; color: rgba(38,51,64,.9); }
-  .you-status .msg b { color: var(--green-deep); }
+  .you-status .msg b { color: var(--ink); }
 
   .note {
     margin: 0; padding: 9px 14px; border-top: 1px solid rgba(26,38,51,.08);
-    background: rgba(255,122,69,.16); font-size: 11px; font-weight: 600; color: #8a3a12;
+    background: rgba(255,255,255,.3); font-size: 11px; font-weight: 600; color: var(--ink);
   }
 
   /* ---------- controls ---------- */
@@ -196,21 +207,22 @@
   #padDrive {
     position: relative; flex: none; width: 112px; height: 112px; border-radius: 50%;
     background:
-      linear-gradient(168deg, rgba(255,255,255,.5), rgba(255,255,255,.05) 46%),
-      rgba(23,153,89,.62);
-    border: 1.5px solid rgba(255,255,255,.75);
-    -webkit-backdrop-filter: blur(18px) saturate(180%); backdrop-filter: blur(18px) saturate(180%);
+      linear-gradient(168deg, rgba(255,255,255,.48), rgba(255,255,255,.06) 46%, rgba(255,255,255,.2)),
+      rgba(255,255,255,.18);
+    border: 1.5px solid rgba(255,255,255,.6);
+    -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%);
     box-shadow:
-      0 12px 28px -8px rgba(0,50,34,.5),
-      inset 0 2px 0 rgba(255,255,255,.7),
-      inset 0 -10px 18px rgba(0,60,40,.22);
+      0 12px 28px -8px rgba(0,20,41,.3),
+      inset 0 2px 0 rgba(255,255,255,.8),
+      inset 0 -10px 18px rgba(0,20,41,.06);
     touch-action: none; cursor: grab; overflow: hidden;
   }
   #padDrive::before {
     content: ''; position: absolute; left: 50%; top: 50%; width: 90px; height: 90px;
     margin: -45px 0 0 -45px; border-radius: 50%;
-    background: rgba(51,217,140,.5);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.5);
+    background: rgba(255,255,255,.1);
+    border: 1px solid rgba(255,255,255,.35);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.45);
   }
   #padDrive .shine {
     position: absolute; left: 18px; top: 14px; width: 30px; height: 16px; border-radius: 50%;
@@ -249,10 +261,10 @@
   #knobLift {
     position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px;
     border-radius: 50%; pointer-events: none;
-    background: linear-gradient(168deg, rgba(255,255,255,.45), rgba(255,255,255,0) 50%), rgba(255,122,69,.88);
-    border: 2px solid rgba(255,255,255,.9);
-    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
-    box-shadow: 0 6px 16px -4px rgba(140,50,10,.5), inset 0 1px 0 rgba(255,255,255,.8);
+    background: linear-gradient(168deg, rgba(255,255,255,.75), rgba(255,255,255,.3) 55%), rgba(255,255,255,.28);
+    border: 1.5px solid rgba(255,255,255,.85);
+    -webkit-backdrop-filter: blur(18px) saturate(180%); backdrop-filter: blur(18px) saturate(180%);
+    box-shadow: 0 6px 16px -4px rgba(0,20,41,.3), inset 0 1px 0 rgba(255,255,255,.95);
   }
   #knobLift::after {
     content: ''; position: absolute; left: 50%; top: 8px; width: 16px; height: 10px;
@@ -269,11 +281,16 @@
   #stop {
     flex: 0 1 auto; min-width: 0; margin-bottom: 44px; max-width: 132px;
     padding: 13px 16px; border-radius: 18px; cursor: pointer; line-height: 1.25;
-    background: var(--danger); border: 1px solid rgba(255,255,255,.55); color: #fff;
+    background:
+      linear-gradient(168deg, rgba(255,255,255,.48), rgba(255,255,255,.08) 46%, rgba(255,255,255,.2)),
+      rgba(255,255,255,.2);
+    border: 1px solid rgba(255,255,255,.6);
+    -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%);
+    color: var(--danger);
     font: 700 13px "Inter", system-ui, sans-serif;
-    box-shadow: 0 8px 22px -6px rgba(180,20,30,.55);
+    box-shadow: 0 10px 26px -8px rgba(0,20,41,.3), inset 0 1px 0 rgba(255,255,255,.85);
   }
-  #stop:active { background: #c62a2f; }
+  #stop:active { background: rgba(255,255,255,.42); }
 
   .controls.locked { opacity: .45; }
   .controls.locked #padDrive, .controls.locked #padLift { pointer-events: none; }
@@ -308,9 +325,11 @@
     font: 600 11px "Inter", system-ui, sans-serif; color: rgba(51,66,82,.85); text-decoration: underline;
   }
   .donate {
-    padding: 6px 12px; border-radius: 14px; border: none; cursor: pointer;
-    background: var(--orange); color: #fff; font: 700 11px "Inter", system-ui, sans-serif;
-    text-decoration: none; display: inline-block;
+    padding: 6px 12px; border-radius: 14px; cursor: pointer; display: inline-block; text-decoration: none;
+    background: linear-gradient(168deg, rgba(255,255,255,.7), rgba(255,255,255,.3));
+    border: 1px solid rgba(255,255,255,.85); color: var(--ink);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.95);
+    font: 700 11px "Inter", system-ui, sans-serif;
   }
 
   /* ---------- status + admin ---------- */
@@ -589,15 +608,9 @@ let latestQueue = { current: null, waiting: [], adminFlying: false, turnMs: 9000
 let latestYou = { state: 'idle', canControl: false, isAdmin: false };
 let removedNoteTimer = null;
 
-const AVATARS = ['#b34af2', '#4fc4f5', '#ffb833', '#33c7b3', '#f273a6', '#7a6cf0', '#38b2f0', '#e0654f'];
-function avatarColor(name) {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-  return AVATARS[h % AVATARS.length];
-}
 function paintAvatar(el, name, isYou) {
   el.hidden = false;
-  el.style.background = isYou ? '#ff7a45' : avatarColor(name);
+  el.classList.toggle('you', !!isYou);
   el.textContent = name.trim().charAt(0).toUpperCase();
 }
 
