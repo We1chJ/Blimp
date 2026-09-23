@@ -68,6 +68,7 @@ const CACHEABLE = /\.(mp4|jpg|jpeg|png|webp|svg|ico|woff2?)$/i;
 
 app.use(express.static(path.join(__dirname, 'public'), {
   dotfiles: 'allow',
+  extensions: ['html'],   // so /admin serves admin.html
   setHeaders(res, filePath) {
     // The page carries all the markup, CSS and JS, so it IS the deploy: it has
     // to revalidate every time or a cached copy keeps running old code against
