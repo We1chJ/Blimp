@@ -107,20 +107,13 @@
   }
 
 
-  /* Real refraction: bend the backdrop through a noise displacement map.
-     Gated on a feature query that only Chromium should pass - but @supports
-     tests whether a value PARSES, and url() is valid syntax for this property
-     everywhere. Safari says yes, takes the declaration, then cannot apply an
-     SVG filter to a backdrop and draws no blur at all, which is why the glass
-     went clear on iOS while looking right on the desktop. The panes below
-     therefore carry enough fill of their own to read as a material with no
-     blur behind them at all. */
-  @supports (backdrop-filter: url(#lgDisplace)) {
-    .glass, .glassy {
-      -webkit-backdrop-filter: blur(11px) saturate(185%) url(#lgDisplace);
-      backdrop-filter: blur(11px) saturate(185%) url(#lgDisplace);
-    }
-  }
+  /* No SVG filter belongs in backdrop-filter. This used to carry
+     url(#lgDisplace) behind an @supports gate, on the assumption that only
+     Chromium would take it - but @supports asks whether a value PARSES, and
+     url() parses everywhere. Safari accepted the declaration, could not apply
+     an SVG filter to a backdrop, and drew no blur at all: on iOS every pane
+     sat flat over a razor-sharp sky while the desktop looked frosted. Plain
+     blur is honoured everywhere, so the two render alike now. */
 
   /* ---------- masthead ---------- */
   /* relative so the how-it-works popover can hang off the info button */
@@ -148,8 +141,8 @@
        one lands on the queue card, and at .72 the names and times behind it
        read straight through - worse still anywhere backdrop-filter is not
        honoured, where the blur that was hiding them does not happen at all. */
-    background: rgba(255,255,255,.95);
-    box-shadow: 0 18px 40px -12px rgba(0,20,41,.45);
+    background: rgba(255,255,255,.88);
+    box-shadow: 0 18px 40px -12px rgba(0,20,41,.4);
     transform-origin: top right;
     animation: howtoPop .22s cubic-bezier(.22,1,.36,1) both;
   }
@@ -289,12 +282,11 @@
   .controls {
     position: relative; isolation: isolate; width: 100%; flex: none; display: flex; align-items: flex-end; justify-content: space-between; gap: 10px;
     padding: 18px 16px 14px;
-    background: rgba(226,233,241,.5);
   }
   /* Locked, the panel is nearly all empty space with a lock in it, so it needs
      to be a surface rather than a window - and it cannot get that from a blur
      that may never run. */
-  .controls.locked, .controls.admin-flying { background: rgba(222,230,239,.82); }
+  .controls.locked, .controls.admin-flying { background: rgba(226,233,241,.42); }
   .stack { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 
   /* on the panel's glass now, not straight on the photo, so they no longer
@@ -407,12 +399,6 @@
     0%, 100% { transform: translateY(0) skewX(0deg) scaleY(1); }
     33%      { transform: translateY(-1.5px) skewX(.35deg) scaleY(1.008); }
     66%      { transform: translateY(1.5px) skewX(-.35deg) scaleY(.994); }
-  }
-  @supports (backdrop-filter: url(#lgLiquid)) {
-    body.liquified .glass:not(#knobDrive):not(#knobLift):not(.control-panel) {
-      -webkit-backdrop-filter: blur(14px) saturate(215%) url(#lgLiquid);
-      backdrop-filter: blur(14px) saturate(215%) url(#lgLiquid);
-    }
   }
 
   /* The head of the panel, tinted to whoever has the blimp: blue while you
@@ -544,22 +530,6 @@
      the sky is there from the first paint either way. startSky() attaches the
      source once the page has finished loading. -->
 <video id="bg" autoplay muted loop playsinline preload="none" poster="sky.jpg"></video>
-
-<svg width="0" height="0" aria-hidden="true" style="position:absolute">
-  <filter id="lgDisplace" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
-    <feTurbulence type="fractalNoise" baseFrequency="0.006 0.009" numOctaves="2" seed="11" result="noise"/>
-    <feGaussianBlur in="noise" stdDeviation="4" result="soft"/>
-    <feDisplacementMap in="SourceGraphic" in2="soft" scale="20" xChannelSelector="R" yChannelSelector="G"/>
-  </filter>
-  <filter id="lgLiquid" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
-    <feTurbulence type="fractalNoise" baseFrequency="0.009 0.013" numOctaves="2" seed="4" result="noise">
-      <animate attributeName="baseFrequency" dur="9s" repeatCount="indefinite"
-               values="0.009 0.013; 0.016 0.008; 0.009 0.013"/>
-    </feTurbulence>
-    <feGaussianBlur in="noise" stdDeviation="3" result="soft"/>
-    <feDisplacementMap in="SourceGraphic" in2="soft" scale="44" xChannelSelector="R" yChannelSelector="G"/>
-  </filter>
-</svg>
 
 <div class="wrap">
 

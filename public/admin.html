@@ -95,16 +95,6 @@
   }
 
 
-  /* Real refraction: bend the backdrop through a noise displacement map.
-     Only Chromium honours url() in backdrop-filter - Safari keeps the blur
-     above and simply skips this, which still reads as glass. */
-  @supports (backdrop-filter: url(#lgDisplace)) {
-    .glass, .glassy {
-      -webkit-backdrop-filter: blur(11px) saturate(185%) url(#lgDisplace);
-      backdrop-filter: blur(11px) saturate(185%) url(#lgDisplace);
-    }
-  }
-
   /* ---------- controls ---------- */
   /* the side padding is the admin bubble's inner gutter - it lives here rather
      than on the bubble so the sticks don't shift when the bubble appears */
@@ -188,12 +178,6 @@
     0%, 100% { transform: translateY(0) skewX(0deg) scaleY(1); }
     33%      { transform: translateY(-1.5px) skewX(.35deg) scaleY(1.008); }
     66%      { transform: translateY(1.5px) skewX(-.35deg) scaleY(.994); }
-  }
-  @supports (backdrop-filter: url(#lgLiquid)) {
-    body.liquified .glass:not(#knobDrive):not(#knobLift):not(.numeral):not(.control-panel) {
-      -webkit-backdrop-filter: blur(14px) saturate(215%) url(#lgLiquid);
-      backdrop-filter: blur(14px) saturate(215%) url(#lgLiquid);
-    }
   }
 
 
@@ -309,22 +293,6 @@
 </head>
 <body>
 <video id="bg" autoplay muted loop playsinline preload="none" poster="sky.jpg"></video>
-
-<svg width="0" height="0" aria-hidden="true" style="position:absolute">
-  <filter id="lgDisplace" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
-    <feTurbulence type="fractalNoise" baseFrequency="0.006 0.009" numOctaves="2" seed="11" result="noise"/>
-    <feGaussianBlur in="noise" stdDeviation="4" result="soft"/>
-    <feDisplacementMap in="SourceGraphic" in2="soft" scale="20" xChannelSelector="R" yChannelSelector="G"/>
-  </filter>
-  <filter id="lgLiquid" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
-    <feTurbulence type="fractalNoise" baseFrequency="0.009 0.013" numOctaves="2" seed="4" result="noise">
-      <animate attributeName="baseFrequency" dur="9s" repeatCount="indefinite"
-               values="0.009 0.013; 0.016 0.008; 0.009 0.013"/>
-    </feTurbulence>
-    <feGaussianBlur in="noise" stdDeviation="3" result="soft"/>
-    <feDisplacementMap in="SourceGraphic" in2="soft" scale="44" xChannelSelector="R" yChannelSelector="G"/>
-  </filter>
-</svg>
 
 <div class="wrap">
   <div class="admin-top">
