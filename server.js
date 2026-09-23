@@ -33,14 +33,18 @@ const donateLimit = rateLimiter({ burst: 5, perMinute: 5 });
 // is textContent), and the directives that actually matter against this app's
 // risks still bite: frame-ancestors stops the donate flow being clickjacked,
 // and connect/script/frame-src confine network reach to Stripe.
+// The *.js.stripe.com wildcards are not optional decoration: Stripe.js starts
+// its frames on sibling origins to load them in parallel, so omitting them
+// makes the wallet buttons appear slowly or not at all. Link's domains are
+// absent because Link is turned off in the element's paymentMethods.
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://js.stripe.com",
+  "script-src 'self' 'unsafe-inline' https://js.stripe.com https://*.js.stripe.com",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  "img-src 'self' data: blob: https://*.stripe.com",
   "media-src 'self'",
-  "connect-src 'self' ws: wss: https://api.stripe.com https://js.stripe.com",
-  "frame-src https://js.stripe.com https://hooks.stripe.com",
+  "connect-src 'self' ws: wss: https://api.stripe.com",
+  "frame-src https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com",
   "frame-ancestors 'none'",
   "base-uri 'none'",
   "form-action 'none'",

@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#9db6cc">
 <title>flyolin.lol — Olin's Community Blimp</title>
+<!-- Donations mount Stripe's wallet buttons; getting the TLS handshake out of
+     the way here is most of the difference between the sheet opening ready and
+     opening on a spinner. -->
+<link rel="preconnect" href="https://js.stripe.com" crossorigin>
+<link rel="preconnect" href="https://api.stripe.com" crossorigin>
 <style>
   :root {
     --ink:        #1c2630;
@@ -375,12 +380,18 @@
   }
 
   /* ---------- donate sheet ---------- */
+  /* Hidden by visibility rather than display: the Express Checkout Element is
+     mounted into this sheet while it is still closed, so the wallet buttons are
+     already there when it opens. A display:none parent has no box for Stripe's
+     iframe to size against. */
   .sheet {
     position: fixed; inset: 0; z-index: 80; display: grid; place-items: end center;
     padding: 16px; background: rgba(12,26,40,.28);
     -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
     animation: sheetFade .22s ease both;
   }
+  .sheet[aria-hidden="true"] { visibility: hidden; pointer-events: none; animation: none; }
+  .sheet[aria-hidden="true"] .sheet-card { animation: none; }
   @keyframes sheetFade { from { opacity: 0; } to { opacity: 1; } }
   .sheet-card {
     position: relative; width: 100%; max-width: 375px; padding: 18px 18px 16px;
@@ -599,7 +610,7 @@
 
 </div>
 
-<div class="sheet" id="donateSheet" hidden>
+<div class="sheet" id="donateSheet" aria-hidden="true">
   <div class="sheet-card glass" role="dialog" aria-modal="true" aria-labelledby="donateTitle">
     <button class="sheet-close" id="donateClose" aria-label="Close">&times;</button>
     <h2 id="donateTitle">Keep the blimp flying</h2>
@@ -989,6 +1000,17 @@ async function bootDonate() {
       emailRequired: true,                        // wallets withhold it otherwise
       buttonHeight: 46,
       layout: { maxColumns: 1, overflow: 'never' },
+      // Link is Stripe's own saved-card wallet. It floats its own prompt in the
+      // corner of the page, which is not ours to put there, so it is off - as
+      // are the methods that make no sense for a donation.
+      paymentMethods: {
+        link: 'never',
+        paypal: 'never',
+        amazonPay: 'never',
+        klarna: 'never',
+        applePay: 'auto',
+        googlePay: 'auto',
+      },
     });
     ece.on('availablepaymentmethodschange', ({ paymentMethods }) => {
       if (paymentMethods) donateSay('');
@@ -1045,28 +1067,43 @@ function thankDonor() {
   donateSay('Your donation went through.', 'good');
 }
 
-function openDonate() { donateSheet.hidden = false; bootDonate(); }
-function closeDonate() { donateSheet.hidden = true; }
+function setDonateOpen(open) {
+  donateSheet.setAttribute('aria-hidden', String(!open));
+}
+function openDonate() { setDonateOpen(true); bootDonate(); }
+function closeDonate() { setDonateOpen(false); }
+function donateIsOpen() { return donateSheet.getAttribute('aria-hidden') === 'false'; }
 
 donateBtn.onclick = e => { e.preventDefault(); openDonate(); };
 donateClose.onclick = closeDonate;
 donateSheet.onclick = e => { if (e.target === donateSheet) closeDonate(); };
 addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
-  if (!donateSheet.hidden) closeDonate();
+  if (donateIsOpen()) closeDonate();
   else if (!howto.hidden) setHowto(false);
 });
 
 // a redirect-based method (not the wallets) sends the donor back here
 if (new URLSearchParams(location.search).get('donated')) {
-  donateSheet.hidden = false;
+  setDonateOpen(true);
   donateBooted = true;
   thankDonor();
   history.replaceState(null, '', location.pathname);
 }
 
-// hide the button outright when the server has no Stripe keys
-getDonateConfig().then(cfg => { donateBtn.hidden = !cfg.enabled; }).catch(() => {});
+// Hide the button when the server has no Stripe keys; otherwise start Stripe
+// straight away. Loading the script, mounting the element and letting it work
+// out which wallets exist is seconds of work, and doing it on the click meant
+// the donor watched all of it. Now the sheet opens onto finished buttons.
+getDonateConfig().then(cfg => {
+  donateBtn.hidden = !cfg.enabled;
+  // once the page has settled - the sky and the socket matter more than a
+  // button nobody has pressed yet
+  if (cfg.enabled) {
+    if (window.requestIdleCallback) requestIdleCallback(bootDonate, { timeout: 4000 });
+    else setTimeout(bootDonate, 1200);
+  }
+}).catch(() => {});
 
 // how-it-works popover, hanging off the info button
 function setHowto(open) {
@@ -1217,7 +1254,7 @@ function recomputeKeys() {
 }
 
 function keysBlocked(e) {
-  if (!donateSheet.hidden || !howto.hidden) return true;   // an overlay is up
+  if (donateIsOpen() || !howto.hidden) return true;   // an overlay is up
   const t = e.target;
   return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA');
 }
