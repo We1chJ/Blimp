@@ -115,8 +115,13 @@ class FlightQueue {
   // Gate for raw motor/stop commands: only the active pilot (or the admin
   // while overriding) may drive the blimp, regardless of what any client UI shows.
   isAuthorized(ws) {
-    if (this.overrideWs) return ws === this.overrideWs;
-    return !!this.current && this.current.ws === ws;
+    return !!ws && ws === this.controller();
+  }
+
+  // The socket whose commands currently reach the motors, or null.
+  controller() {
+    if (this.overrideWs) return this.overrideWs;
+    return this.current ? this.current.ws : null;
   }
 
   tick() {

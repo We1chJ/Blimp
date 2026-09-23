@@ -55,16 +55,26 @@
     content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
     background: linear-gradient(180deg, rgba(255,255,255,0) 38%, rgba(255,255,255,.34));
   }
+  /* A veil over the sky. It sits above #bg but below the glass, so it dims the
+     video and the still it falls back to alike - filtering #bg alone would
+     leave the reduced-motion fallback at full brightness. */
+  body::after {
+    content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background: rgba(12,24,40,.2);
+  }
   /* poster/fallback if the video never plays */
   body { background: #9db6cc url('sky.jpg') center/cover no-repeat fixed; }
   @media (prefers-reduced-motion: reduce) { #bg { display: none; } }
 
+  /* The footer is the bottom of the page. The status readout moved into the
+     info popover and the admin console onto /admin, so nothing is left below
+     it to scroll to. */
+  html, body { overflow: hidden; }
   .wrap {
     width: 100%; max-width: 375px; margin: 0 auto;
-    min-height: 100dvh; padding-top: max(14px, env(safe-area-inset-top));
-    display: flex; flex-direction: column;
+    height: 100dvh; padding-top: max(14px, env(safe-area-inset-top));
+    display: flex; flex-direction: column; min-height: 0;
   }
-  .extras { width: 100%; max-width: 375px; margin: 0 auto; }
 
   /* liquid glass: blurred + saturated backdrop, a glossy sheen baked into the
      background, a bright top rim and a soft float shadow */
@@ -97,15 +107,13 @@
   }
 
 
-  /* Real refraction: bend the backdrop through a noise displacement map.
-     Only Chromium honours url() in backdrop-filter - Safari keeps the blur
-     above and simply skips this, which still reads as glass. */
-  @supports (backdrop-filter: url(#lgDisplace)) {
-    .glass, .glassy {
-      -webkit-backdrop-filter: blur(11px) saturate(185%) url(#lgDisplace);
-      backdrop-filter: blur(11px) saturate(185%) url(#lgDisplace);
-    }
-  }
+  /* No SVG filter belongs in backdrop-filter. This used to carry
+     url(#lgDisplace) behind an @supports gate, on the assumption that only
+     Chromium would take it - but @supports asks whether a value PARSES, and
+     url() parses everywhere. Safari accepted the declaration, could not apply
+     an SVG filter to a backdrop, and drew no blur at all: on iOS every pane
+     sat flat over a razor-sharp sky while the desktop looked frosted. Plain
+     blur is honoured everywhere, so the two render alike now. */
 
   /* ---------- masthead ---------- */
   /* relative so the how-it-works popover can hang off the info button */
@@ -129,7 +137,12 @@
     position: absolute; z-index: 70; top: calc(100% + 10px); right: 0;
     width: min(320px, calc(100vw - 40px));
     padding: 14px 16px 16px; border-radius: 20px;
-    background: rgba(255,255,255,.72);
+    /* Nearly opaque on purpose. Every other pane floats over the sky, but this
+       one lands on the queue card, and at .72 the names and times behind it
+       read straight through - worse still anywhere backdrop-filter is not
+       honoured, where the blur that was hiding them does not happen at all. */
+    background: rgba(255,255,255,.88);
+    box-shadow: 0 18px 40px -12px rgba(0,20,41,.4);
     transform-origin: top right;
     animation: howtoPop .22s cubic-bezier(.22,1,.36,1) both;
   }
@@ -144,9 +157,22 @@
   .howto ul { margin: 0; padding: 0 0 0 18px; }
   .howto li { margin-top: 8px; font-size: 12px; color: rgba(38,51,64,.9); }
   .howto b { font-weight: 700; }
+  .howto-status {
+    margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(26,38,51,.1);
+    display: grid; gap: 3px; font-size: 11px; color: var(--ink-muted);
+  }
+  .howto-status .live { font-weight: 600; color: var(--ink-soft); }
+  .admin-link {
+    justify-self: start; margin-top: 6px;
+    font-size: 11px; font-weight: 700; color: var(--blue-ink); text-decoration: none;
+  }
+  .admin-link:hover { text-decoration: underline; }
 
   /* ---------- queue card ---------- */
-  .queue-card { margin-top: 12px; border-radius: var(--radius); overflow: hidden; }
+  .queue-card {
+    margin-top: 12px; border-radius: var(--radius); overflow: hidden;
+    display: flex; flex-direction: column; min-height: 0;
+  }
 
   .now-row {
     position: relative; display: flex; align-items: center; gap: 8px;
@@ -155,7 +181,6 @@
   .now-row .fill {
     position: absolute; left: 0; top: 0; bottom: 0; width: 0;
     background: rgba(255,255,255,.5); border-right: 2px solid rgba(255,255,255,.95);
-    transition: width .4s linear;
   }
   .now-row > *:not(.fill) { position: relative; }
   .now-row .who { flex: 1; min-width: 0; }
@@ -164,6 +189,7 @@
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
   .now-row .sub { display: block; font-size: 9px; font-weight: 600; color: var(--ink-muted); }
+  .now-row .sub:empty { display: none; }
   .now-row .left { font-size: 14px; font-weight: 700; color: var(--ink); white-space: nowrap; }
   /* nobody flying: no green fill behind, so ink instead of white */
   .now-row.empty .nm { color: var(--ink); font-weight: 600; }
@@ -181,7 +207,9 @@
   .avatar.you { border-color: #fff; background: rgba(255,255,255,.8); color: var(--ink); }
   .now-row .avatar { width: 32px; height: 32px; font-size: 12px; }
 
-  .up-next { list-style: none; margin: 0; padding: 0; }
+  /* the queue is the one part that grows without limit, so it scrolls inside
+     the card rather than pushing the sticks off a page that cannot scroll */
+  .up-next { list-style: none; margin: 0; padding: 0; overflow-y: auto; min-height: 0; }
   .up-next li {
     display: flex; align-items: center; gap: 12px;
     padding: 7px 14px; border-top: 1px solid rgba(26,38,51,.08);
@@ -197,7 +225,10 @@
     font-size: 10px; font-weight: 700; color: var(--ink-soft);
   }
   .up-next li.me .nm { font-weight: 700; }
-  .up-next li.empty { justify-content: center; font-size: 12px; color: var(--ink-muted); padding: 12px 14px; }
+  .up-next li.empty {
+    justify-content: center; padding: 12px 14px; text-align: center;
+    font-size: 12px; font-weight: 600; color: var(--ink);
+  }
 
   /* ---------- join / your status ---------- */
   .join-row, .you-status {
@@ -235,21 +266,34 @@
 
   /* ---------- controls ---------- */
   .controls-wrap {
-    position: relative; flex: 1; min-height: 240px; margin: 16px 0 20px;
-    display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 24px;
+    position: relative; flex: 1 1 auto; min-height: 0; margin: 16px 0 20px;
+    display: flex; flex-direction: column; justify-content: flex-end; align-items: center;
   }
   /* the side padding is the admin bubble's inner gutter - it lives here rather
      than on the bubble so the sticks don't shift when the bubble appears */
+  /* The sticks sit on their own pane of the same glass as the rest of the
+     furniture, with the state banner built into its head rather than floating
+     above it - one object instead of two. It replaces the bubble that used to
+     appear only while an admin was flying; the banner's tint carries that now. */
+  .control-panel {
+    position: relative; isolation: isolate; width: 100%;
+    border-radius: var(--radius); overflow: hidden;
+  }
   .controls {
     position: relative; isolation: isolate; width: 100%; flex: none; display: flex; align-items: flex-end; justify-content: space-between; gap: 10px;
-    padding: 0 14px 10px;
+    padding: 18px 16px 14px;
   }
+  /* Locked, the panel is nearly all empty space with a lock in it, so it needs
+     to be a surface rather than a window - and it cannot get that from a blur
+     that may never run. */
+  .controls.locked, .controls.admin-flying { background: rgba(226,233,241,.42); }
   .stack { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 
-  /* these sit straight on the photo, which is dark at the bottom */
+  /* on the panel's glass now, not straight on the photo, so they no longer
+     need a halo to survive whatever drifts past behind them */
   .stick-label {
-    font-size: 13px; font-weight: 500; letter-spacing: 0;
-    color: #fff; text-shadow: 0 1px 4px rgba(0,20,41,.55);
+    font-size: 12px; font-weight: 700; letter-spacing: .02em;
+    color: var(--ink-soft);
   }
 
   /* drive joystick */
@@ -302,42 +346,41 @@
   #knobDrive::after,  #knobLift::after  { filter: blur(4px); }
 
 
-  .controls.locked { opacity: .45; }
-  .controls.locked #padDrive, .controls.locked #padLift { pointer-events: none; }
-  .controls.admin-flying { pointer-events: none; }
+  /* When the sticks cannot be used they are replaced, not dimmed - a dimmed
+     control still reads as a control you might be able to press. The row keeps
+     its place in the flow so the panel never changes height as control passes
+     between people.
 
-  /* admin has control: the two sticks are sealed inside a rounded glass pane
-     of the same family as the rest of the furniture, and the page goes liquid */
-  .bubble {
-    position: absolute; inset: -14px 0 -8px; z-index: -1; pointer-events: none;
-    border-radius: var(--radius);
-  }
-  /* the whole surface turns to liquid while the admin flies */
-  body.liquified .glass:not(#knobDrive):not(#knobLift):not(.numeral):not(.bubble) {
-    -webkit-backdrop-filter: blur(20px) saturate(215%); backdrop-filter: blur(20px) saturate(215%);
-    animation: liquidWobble 5.5s ease-in-out infinite;
-  }
-  @keyframes liquidWobble {
-    0%, 100% { transform: translateY(0) skewX(0deg) scaleY(1); }
-    33%      { transform: translateY(-1.5px) skewX(.35deg) scaleY(1.008); }
-    66%      { transform: translateY(1.5px) skewX(-.35deg) scaleY(.994); }
-  }
-  @supports (backdrop-filter: url(#lgLiquid)) {
-    body.liquified .glass:not(#knobDrive):not(#knobLift):not(.numeral):not(.bubble) {
-      -webkit-backdrop-filter: blur(14px) saturate(215%) url(#lgLiquid);
-      backdrop-filter: blur(14px) saturate(215%) url(#lgLiquid);
-    }
-  }
+     pointer-events stays on its own line, away from the cosmetics, so a
+     restyle can never quietly unlock a stick. */
+  .controls.locked #padDrive, .controls.locked #padLift,
+  .controls.admin-flying #padDrive, .controls.admin-flying #padLift { pointer-events: none; }
 
-  /* ---------- 3-2-1 ---------- */
-  .countdown {
-    position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; pointer-events: none;
+  .controls.locked .stack, .controls.admin-flying .stack { visibility: hidden; }
+
+  .locked-face {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; text-align: center; pointer-events: none;
+    font-size: 12px; font-weight: 700; color: var(--blue-ink);
   }
-  .countdown .numeral {
-    width: 148px; height: 148px; border-radius: 50%;
-    display: grid; place-items: center;
-    font: 700 84px/1 "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-    color: rgba(255,255,255,.92); text-shadow: 0 2px 18px rgba(0,20,41,.45);
+  .controls.admin-flying .locked-face { color: var(--danger-ink); }
+  .lock { width: 44px; height: 44px; }
+
+  /* The last five seconds before the blimp is yours: the lock gives up its
+     slot to the count, so the panel says "not yet" and then "nearly" in the
+     same place rather than stacking a second message on top of the first.
+     Green because that is the colour the banner is about to turn. */
+  .lock-count {
+    display: none;
+    font: 700 72px/1 "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    color: var(--green-deep);
+    text-shadow: 0 2px 14px rgba(255,255,255,.55);
+  }
+  .locked-face.counting .lock,
+  .locked-face.counting #lockedText { display: none; }
+  .locked-face.counting .lock-count {
+    display: block;
     animation: countPop .95s cubic-bezier(.22,1,.36,1) both;
   }
   @keyframes countPop {
@@ -347,37 +390,50 @@
     100% { transform: scale(.92);  opacity: 0; filter: blur(7px); }
   }
 
-  /* one banner above the sticks, tinted to whoever has the blimp:
-     blue while you watch, green on your turn, red when the admin takes over */
-  .spectating {
-    z-index: 2; padding: 6px 14px; border-radius: 14px; max-width: 100%; text-align: center;
-    background: rgba(255,255,255,.6); border: 1px solid rgba(255,255,255,.8);
-    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-    font-size: 11px; font-weight: 700; line-height: 1.4; color: rgba(38,51,64,.9);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 6px 16px -8px rgba(0,20,41,.3);
+  /* the whole surface turns to liquid while the admin flies */
+  body.liquified .glass:not(#knobDrive):not(#knobLift):not(.control-panel) {
+    -webkit-backdrop-filter: blur(20px) saturate(215%); backdrop-filter: blur(20px) saturate(215%);
+    animation: liquidWobble 5.5s ease-in-out infinite;
   }
-  .spectating.blue  { background: rgba(219,234,255,.7); color: var(--blue-ink); }
-  .spectating.green { background: rgba(215,248,232,.7); color: var(--green-deep); }
-  .spectating.red   { background: rgba(255,224,225,.72); color: var(--danger-ink); }
+  @keyframes liquidWobble {
+    0%, 100% { transform: translateY(0) skewX(0deg) scaleY(1); }
+    33%      { transform: translateY(-1.5px) skewX(.35deg) scaleY(1.008); }
+    66%      { transform: translateY(1.5px) skewX(-.35deg) scaleY(.994); }
+  }
+
+  /* The head of the panel, tinted to whoever has the blimp: blue while you
+     watch, green on your turn, red when an admin takes over. It is a band
+     across the top rather than a floating pill, so the panel reads as one
+     object and the state is the first thing in it. */
+  .spectating {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 9px 14px; text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,.5);
+    font-size: 11px; font-weight: 700; line-height: 1.35; color: rgba(38,51,64,.9);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.85);
+  }
+  /* the dot picks up the band's own ink, so one colour drives both */
+  .spectating::before {
+    content: ''; flex: none; width: 7px; height: 7px; border-radius: 50%;
+    background: currentColor;
+  }
+  .spectating.blue  { background: rgba(198,222,255,.6);  color: var(--blue-ink); }
+  .spectating.green { background: rgba(199,244,223,.6);  color: var(--green-deep); }
+  .spectating.red   { background: rgba(255,210,212,.62); color: var(--danger-ink); }
 
   /* ---------- footer ---------- */
+  /* The whole bar is the donate control - one target the width of the page,
+     which is easier to hit on a phone than a pill in the corner was. */
   .footer {
     margin-top: auto; margin-bottom: max(12px, env(safe-area-inset-bottom));
-    padding: 10px 14px; min-height: 52px; border-radius: 22px;
-    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    width: 100%; padding: 10px 14px; min-height: 52px; border-radius: 22px;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    cursor: pointer;
+    font: 700 12px "Inter", -apple-system, system-ui, sans-serif;
+    color: rgba(51,66,82,.9);
   }
-  .footer .left { font-size: 11px; font-weight: 600; color: rgba(51,66,82,.85); }
-  .footer .left button {
-    background: none; border: none; padding: 0; cursor: pointer;
-    font: 600 11px "Inter", system-ui, sans-serif; color: rgba(51,66,82,.85); text-decoration: underline;
-  }
-  .donate {
-    padding: 6px 12px; border-radius: 14px; cursor: pointer; display: inline-block; text-decoration: none;
-    background: linear-gradient(168deg, rgba(255,255,255,.7), rgba(255,255,255,.3));
-    border: 1px solid rgba(255,255,255,.85); color: var(--ink);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.95);
-    font: 700 11px "Inter", system-ui, sans-serif;
-  }
+  .footer:active { transform: translateY(1px); }
+  .boba { flex: none; width: 15px; height: 15px; }
 
   /* ---------- donate sheet ---------- */
   /* Hidden by visibility rather than display: the Express Checkout Element is
@@ -452,61 +508,17 @@
   }
   .dot.on { background: var(--green); box-shadow: 0 0 6px rgba(41,199,128,.7); }
 
-  .admin-toggle {
-    display: block; margin: 10px auto 16px; padding: 5px 12px; border-radius: 12px; cursor: pointer;
-    background: rgba(255,255,255,.45); border: 1px solid rgba(255,255,255,.7);
-    font: 600 11px "Inter", system-ui, sans-serif; color: rgba(51,66,82,.85);
-  }
-  .admin-panel { margin: 0 0 16px; border-radius: 18px; overflow: hidden; }
-  .admin-panel h2 {
-    margin: 0; padding: 10px 14px; border-bottom: 1px solid rgba(26,38,51,.08);
-    font-size: 11px; font-weight: 700; color: rgba(38,51,64,.9);
-  }
-  .admin-login { display: flex; gap: 8px; padding: 12px 14px; }
-  .admin-login input {
-    flex: 1; min-width: 0; padding: 9px 12px; border-radius: 12px;
-    background: rgba(255,255,255,.7); border: 1px solid rgba(255,255,255,.85);
-    font: 13px "Inter", system-ui, sans-serif; color: var(--ink);
-  }
-  .admin-login input:focus { outline: none; border-color: var(--green); }
-  .admin-error { margin: 0; padding: 0 14px 12px; font-size: 12px; font-weight: 600; color: var(--danger); }
-
-  .admin-list { list-style: none; margin: 0; padding: 0; }
-  .admin-list li {
-    display: flex; align-items: center; justify-content: space-between; gap: 10px;
-    padding: 9px 14px; border-bottom: 1px solid rgba(26,38,51,.08); font-size: 13px;
-  }
-  .admin-list .remove {
-    padding: 4px 10px; border-radius: 10px; cursor: pointer;
-    background: rgba(255,255,255,.6); border: 1px solid rgba(229,72,77,.4); color: var(--danger);
-    font: 700 11px "Inter", system-ui, sans-serif;
-  }
-  .admin-control { padding: 12px 14px; }
-  .admin-control button.taking { background: var(--danger); border-color: rgba(255,255,255,.6); color: #fff; }
-
-  .manual { padding: 0 14px 14px; }
-  .manual h2 { padding: 0 0 8px; border: none; font-size: 11px; color: var(--ink-muted); }
-  .mrow { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
-  .mrow label { width: 46px; font-size: 12px; font-weight: 600; color: var(--ink-muted); }
-  .mrow input {
-    flex: 1; min-width: 0; padding: 7px 10px; border-radius: 10px;
-    background: rgba(255,255,255,.7); border: 1px solid rgba(255,255,255,.85);
-    font: 12px "Inter", system-ui, sans-serif; color: var(--ink);
-  }
-  #send {
-    width: 100%; margin-top: 4px; padding: 9px; border-radius: 12px; cursor: pointer;
-    background: rgba(255,255,255,.6); border: 1px solid rgba(255,255,255,.85);
-    font: 700 12px "Inter", system-ui, sans-serif; color: rgba(38,51,64,.9);
-  }
-  .manual.locked { opacity: .45; pointer-events: none; }
-
   @media (max-width: 360px) {
     body { padding: 0 14px; }
     .controls { gap: 6px; }
   }
 
-  @media (max-height: 720px) {
-    .controls-wrap { min-height: 180px; }
+  /* The page is pinned to one screen, which is right on a phone but traps the
+     footer if the window is shorter than the content can compress to - a small
+     preview pane, say. Below that, let it scroll rather than clip. */
+  @media (max-height: 560px) {
+    html, body { overflow: auto; }
+    .wrap { height: auto; min-height: 100dvh; }
   }
 </style>
 </head>
@@ -519,24 +531,6 @@
      source once the page has finished loading. -->
 <video id="bg" autoplay muted loop playsinline preload="none" poster="sky.jpg"></video>
 
-<svg width="0" height="0" aria-hidden="true" style="position:absolute">
-  <filter id="lgDisplace" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
-    <feTurbulence type="fractalNoise" baseFrequency="0.006 0.009" numOctaves="2" seed="11" result="noise"/>
-    <feGaussianBlur in="noise" stdDeviation="4" result="soft"/>
-    <feDisplacementMap in="SourceGraphic" in2="soft" scale="20" xChannelSelector="R" yChannelSelector="G"/>
-  </filter>
-  <filter id="lgLiquid" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">
-    <feTurbulence type="fractalNoise" baseFrequency="0.009 0.013" numOctaves="2" seed="4" result="noise">
-      <animate attributeName="baseFrequency" dur="9s" repeatCount="indefinite"
-               values="0.009 0.013; 0.016 0.008; 0.009 0.013"/>
-    </feTurbulence>
-    <feGaussianBlur in="noise" stdDeviation="3" result="soft"/>
-    <feDisplacementMap in="SourceGraphic" in2="soft" scale="44" xChannelSelector="R" yChannelSelector="G"/>
-  </filter>
-</svg>
-
-<div class="countdown" id="countdown" hidden><span class="numeral glass" id="countdownNum">3</span></div>
-
 <div class="wrap">
 
   <div class="masthead">
@@ -545,14 +539,20 @@
             aria-expanded="false" aria-controls="howto">i</button>
 
     <div class="howto glass" id="howto" role="dialog" aria-label="How it works" hidden>
-      <h2>Take turns flying a real blimp — 90 sec per turn</h2>
+      <h2>How to fly the Olin Blimp</h2>
       <ul>
         <li>When nobody is queued, the blimp idles or an admin flies it.</li>
         <li>Enter your name, join the queue, and wait your turn.</li>
-        <li><b>Keep this page open</b> on your phone — close it and you lose your spot.</li>
-        <li>When it is your turn you get <b>90 seconds</b> of flying time.</li>
+        <li>Keep this page open on your phone or else you’ll lose your spot in the queue.</li>
+        <li>When it is your turn you get 90 seconds of flying time.</li>
         <li>An admin can take control at any time, so fly responsibly.</li>
       </ul>
+      <div class="howto-status">
+        <div class="live"><span class="dot" id="dot"></span><span id="statusText">Connecting…</span></div>
+        <div id="depth">Command queue: idle</div>
+        <div id="state">Device state: —</div>
+        <a class="admin-link" href="/admin">Admin →</a>
+      </div>
     </div>
   </div>
 
@@ -562,7 +562,7 @@
       <span class="avatar" id="nowAvatar" hidden></span>
       <span class="who">
         <span class="nm" id="nowName">Nobody flying</span>
-        <span class="sub" id="nowSub">The blimp is idle</span>
+        <span class="sub" id="nowSub"></span>
       </span>
       <span class="left" id="nowLeft"></span>
     </div>
@@ -583,6 +583,7 @@
   </div>
 
   <div class="controls-wrap">
+   <div class="control-panel glass">
     <span class="spectating blue" id="sticksNote">You’re spectating right now. Join the queue to fly.</span>
 
     <div class="controls" id="controls">
@@ -603,14 +604,34 @@
         <span class="stick-label">Altitude</span>
       </div>
 
-      <div class="bubble glass" id="adminBubble" hidden></div>
+
+      <div class="locked-face" id="lockedFace" hidden>
+        <svg class="lock" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M8 10V7.5a4 4 0 0 1 8 0V10" fill="none" stroke="currentColor"
+                stroke-width="2.4" stroke-linecap="round"/>
+          <rect x="4.75" y="10" width="14.5" height="10.5" rx="3.2" fill="currentColor"/>
+          <circle cx="12" cy="15.25" r="1.35" fill="rgba(255,255,255,.85)"/>
+        </svg>
+        <span id="lockedText">Controls locked for now</span>
+        <span class="lock-count" id="lockCount">5</span>
+      </div>
     </div>
+   </div>
   </div>
 
-  <div class="footer glass">
-    <span class="left">flyolin.lol · <button id="aboutBtn">About</button></span>
-    <a class="donate" id="donateBtn" href="#">Donate</a>
-  </div>
+  <button class="footer glass" id="donateBtn">
+    <svg class="boba" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M4.3 5.6h7.4l-.85 8.1a1 1 0 0 1-1 .9H6.15a1 1 0 0 1-1-.9z"
+            fill="currentColor" opacity=".18"/>
+      <path d="M4.3 5.6h7.4l-.85 8.1a1 1 0 0 1-1 .9H6.15a1 1 0 0 1-1-.9z"
+            fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/>
+      <rect x="3.3" y="3.9" width="9.4" height="1.9" rx=".95" fill="currentColor"/>
+      <path d="M9.8 3.9V1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+      <circle cx="6.7" cy="12.1" r=".95" fill="currentColor"/>
+      <circle cx="9.4" cy="12.4" r=".95" fill="currentColor"/>
+      <circle cx="8.05" cy="10.4" r=".9" fill="currentColor"/>
+    </svg>Buy me boba
+  </button>
 
 </div>
 
@@ -618,7 +639,7 @@
   <div class="sheet-card glass" role="dialog" aria-modal="true" aria-labelledby="donateTitle">
     <button class="sheet-close" id="donateClose" aria-label="Close">&times;</button>
     <h2 id="donateTitle">Keep the blimp flying</h2>
-    <p class="sheet-sub">Helium, batteries and hosting. Any amount helps.</p>
+    <p class="sheet-sub">Helium is expensive.</p>
 
     <div class="amounts" id="donateAmounts">
       <button type="button" class="amount" data-cents="300">$3</button>
@@ -636,114 +657,24 @@
   </div>
 </div>
 
-<div class="extras">
-  <div class="status glass">
-    <div><span class="dot" id="dot"></span><span id="statusText">Connecting…</span></div>
-    <div id="depth">Command queue: idle</div>
-    <div id="state">Device state: —</div>
-  </div>
 
-  <button class="admin-toggle" id="adminToggle">Admin</button>
-
-  <div class="admin-panel glass" id="adminLoginPanel" hidden>
-    <h2>Admin login</h2>
-    <div class="admin-login">
-      <input id="adminPassword" type="password" placeholder="Password">
-      <button class="btn" id="adminLoginBtn">Log in</button>
-    </div>
-    <p class="admin-error" id="adminError" hidden>Wrong password</p>
-  </div>
-
-  <div class="admin-panel glass" id="adminPanel" hidden>
-    <h2>Admin</h2>
-    <ul class="admin-list" id="adminList"></ul>
-    <div class="admin-control">
-      <button class="btn" id="adminControlBtn">Take control</button>
-    </div>
-
-    <div class="manual" id="manual">
-      <h2>Manual voltage</h2>
-      <div class="mrow"><label>Left</label><input id="l" type="number" min="-100" max="100" value="0"></div>
-      <div class="mrow"><label>Right</label><input id="r" type="number" min="-100" max="100" value="0"></div>
-      <div class="mrow"><label>Lift</label><input id="u" type="number" min="-100" max="100" value="0"></div>
-      <button id="send">Send all</button>
-    </div>
-  </div>
-</div>
-
+<script src="blimp-core.js"></script>
 <script>
-// ---------------- socket ----------------
-const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-let ws;
-let lastMsg = null;          // last "m l r u" transmitted
-let deviceWasOnline = false;
-
-function connect() {
-  ws = new WebSocket(proto + '://' + location.host + '/ui');
-
-  ws.onopen = () => { statusText.textContent = 'Connected'; };
-
-  ws.onclose = () => {
-    lastMsg = null;                       // board zeroes on drop, so resend
-    dot.classList.remove('on');
-    statusText.textContent = 'Disconnected — reconnecting…';
-    setTimeout(connect, 2000);
-  };
-
-  ws.onmessage = e => {
-    const m = JSON.parse(e.data);
-
-    if (m.type === 'status') {
-      dot.classList.toggle('on', m.deviceOnline);
-      statusText.textContent = (m.deviceOnline ? 'Blimp online' : 'Blimp offline')
-        + ' · ' + m.users + (m.users === 1 ? ' person here' : ' people here');
-
-      // The board zeroes its speeds whenever it drops, but our socket stayed
-      // up, so we still think the last command is in force and would send
-      // nothing. Re-assert whatever the sticks currently say.
-      if (m.deviceOnline && !deviceWasOnline) {
-        lastMsg = null;
-        dirty = true;
-        flush();      // now, not on the next tick: background tabs throttle timers
-      }
-      deviceWasOnline = m.deviceOnline;
-    }
-    if (m.type === 'depth') {
-      const secs = (m.depth * m.tickMs / 1000).toFixed(1);
-      depth.textContent = m.depth ? 'Command queue: ' + m.depth + ' (~' + secs + 's behind)' : 'Command queue: idle';
-    }
-    if (m.type === 'state') {
-      state.textContent = 'Device state: ' + m.data;
-    }
-    if (m.type === 'queue') {
-      latestQueue = m;
-      renderQueue();
-    }
-    if (m.type === 'you') {
-      latestYou = m;
-      renderYou();
-    }
-    if (m.type === 'adminAuth') {
-      adminError.hidden = m.ok;
-      if (m.ok) { adminLoginPanel.hidden = true; adminPanel.hidden = false; }
-    }
-    if (m.type === 'removedByAdmin') {
-      removedNote.hidden = false;
-      clearTimeout(removedNoteTimer);
-      removedNoteTimer = setTimeout(() => { removedNote.hidden = true; }, 4000);
-    }
-  };
+// ---------------- server messages ----------------
+// blimp-core.js owns the socket, the sticks and the status readout; this is
+// only what the flyer's page does on top of it.
+function onBlimpMessage(m) {
+  if (m.type === 'queue') renderQueue();
+  if (m.type === 'you') renderYou();
+  if (m.type === 'removedByAdmin') {
+    removedNote.hidden = false;
+    clearTimeout(removedNoteTimer);
+    removedNoteTimer = setTimeout(() => { removedNote.hidden = true; }, 4000);
+  }
 }
-connect();
-
-function send(text) {
-  if (ws && ws.readyState === 1) ws.send(text);
-}
-function sendJson(obj) { send(JSON.stringify(obj)); }
+function blimpKeysBlocked() { return donateIsOpen() || !howto.hidden; }
 
 // ---------------- flight queue ----------------
-let latestQueue = { current: null, waiting: [], adminFlying: false, turnMs: 90000 };
-let latestYou = { state: 'idle', canControl: false, isAdmin: false };
 let removedNoteTimer = null;
 
 function paintAvatar(el, name, isYou) {
@@ -762,6 +693,29 @@ function fmtWait(ms) {
   return s < 60 ? '~' + s + ' sec wait' : '~' + Math.round(s / 60) + ' min wait';
 }
 
+// The server sends the clock once a second, so setting the bar straight from
+// it steps once a second - and a CSS transition only turns that into a stall
+// followed by a lurch whenever a broadcast lands early or late. Take the
+// server's reading as a fix, then run the bar off the local clock between
+// them, which is what makes it look continuous.
+let fillFix = { msLeft: 0, turnMs: 1, paused: true, at: 0 };
+let fillRaf = 0;
+
+function setFill(msLeft, turnMs, paused) {
+  fillFix = { msLeft, turnMs: turnMs || 1, paused: !!paused, at: performance.now() };
+  if (!fillRaf) fillRaf = requestAnimationFrame(stepFill);
+}
+
+function stepFill() {
+  const f = fillFix;
+  // paused means an admin took over and the turn's clock is held, so the bar
+  // holds with it rather than draining behind the scenes
+  const elapsed = f.paused ? 0 : performance.now() - f.at;
+  const left = Math.max(0, f.msLeft - elapsed);
+  nowFill.style.width = Math.max(0, Math.min(100, left / f.turnMs * 100)) + '%';
+  fillRaf = (left > 0 && !f.paused) ? requestAnimationFrame(stepFill) : 0;
+}
+
 function renderQueue() {
   const q = latestQueue;
   const youFlying = latestYou.state === 'flying';
@@ -772,13 +726,13 @@ function renderQueue() {
     nowName.textContent = youFlying ? 'You' : q.current.username;
     nowSub.textContent = q.current.paused ? 'Paused — admin flying' : 'Flying now';
     nowLeft.textContent = fmtTime(q.current.msLeft) + ' left';
-    nowFill.style.width = Math.max(0, Math.min(100, q.current.msLeft / q.turnMs * 100)) + '%';
+    setFill(q.current.msLeft, q.turnMs, q.current.paused);
   } else {
     nowAvatar.hidden = true;
     nowName.textContent = 'Nobody flying';
-    nowSub.textContent = 'The blimp is idle';
+    nowSub.textContent = '';
     nowLeft.textContent = '';
-    nowFill.style.width = '0%';
+    setFill(0, 1, true);
   }
   adminFlyingNote.hidden = !q.adminFlying;
 
@@ -786,7 +740,7 @@ function renderQueue() {
   if (!q.waiting.length) {
     const li = document.createElement('li');
     li.className = 'empty';
-    li.textContent = q.current ? 'Nobody else waiting' : 'Nobody waiting — join to fly now';
+    li.textContent = q.current ? 'Nobody else waiting' : 'Nobody is in the queue yet. Join to fly now.';
     upNext.appendChild(li);
   } else {
     const mine = latestYou.state === 'waiting' ? latestYou.position : null;
@@ -811,7 +765,6 @@ function renderQueue() {
     });
   }
 
-  renderAdminList();
 }
 
 function renderYou() {
@@ -835,9 +788,8 @@ function renderYou() {
   const adminHasControl = latestQueue.adminFlying && !y.canControl;
   controls.classList.toggle('locked', !y.canControl && !adminHasControl);
   controls.classList.toggle('admin-flying', adminHasControl);
-  adminBubble.hidden = !adminHasControl;
+  renderLockFace(y);
   document.body.classList.toggle('liquified', adminHasControl);
-  manual.classList.toggle('locked', !y.canControl);
   sticksNote.textContent = adminHasControl
     ? 'The admin is taking control temporarily.'
     : y.canControl
@@ -848,66 +800,28 @@ function renderYou() {
   sticksNote.classList.toggle('blue', !adminHasControl && !y.canControl);
   sticksNote.hidden = false;
 
-  adminToggle.hidden = y.isAdmin && !adminPanel.hidden;
-  if (y.isAdmin && adminLoginPanel.hidden === false) {
-    adminLoginPanel.hidden = true;
-    adminPanel.hidden = false;
-  }
-  const overriding = y.isAdmin && y.canControl && latestQueue.adminFlying;
-  adminControlBtn.textContent = overriding ? 'Release control' : 'Take control';
-  adminControlBtn.classList.toggle('taking', overriding);
 
-  renderCountdown();
   renderQueue();   // whether a row reads "You" depends on your own state
 }
 
-// Flash 3-2-1 in the middle of the screen when your turn is about to end,
-// or about to start because you are next in line.
-let countdownAt = 0;
-function renderCountdown() {
-  const y = latestYou;
-  const imminent = y.state === 'flying' || (y.state === 'waiting' && y.position === 1);
-  const n = imminent ? Math.ceil(y.msLeft / 1000) : 0;
+// The sticks are swapped for a lock whenever they are not yours to use, and
+// for a count in the last five seconds before they become yours.
+let lockCountAt = 0;
+function renderLockFace(y) {
+  lockedFace.hidden = y.canControl;
 
-  if (n < 1 || n > 3) {
-    countdown.hidden = true;
-    countdownAt = 0;
-    return;
-  }
-  if (n === countdownAt) return;        // same second, let the animation finish
-  countdownAt = n;
-  countdown.hidden = false;
-  countdownNum.textContent = n;
-  countdownNum.style.animation = 'none';
-  void countdownNum.offsetWidth;        // reflow, so the pop replays per digit
-  countdownNum.style.animation = '';
-}
+  const nextUp = y.state === 'waiting' && y.position === 1;
+  const n = nextUp ? Math.ceil(y.msLeft / 1000) : 0;
+  const counting = n >= 1 && n <= 5;
 
-function renderAdminList() {
-  if (adminPanel.hidden) return;
-  adminList.innerHTML = '';
-  const entries = [];
-  if (latestQueue.current) entries.push({ ...latestQueue.current, tag: 'flying' });
-  latestQueue.waiting.forEach(e => entries.push({ ...e, tag: 'waiting' }));
-
-  if (!entries.length) {
-    const li = document.createElement('li');
-    li.textContent = 'Queue is empty';
-    adminList.appendChild(li);
-    return;
-  }
-
-  entries.forEach(e => {
-    const li = document.createElement('li');
-    const label = document.createElement('span');
-    label.textContent = e.username + (e.tag === 'flying' ? ' (flying)' : '');
-    const btn = document.createElement('button');
-    btn.className = 'remove';
-    btn.textContent = 'Remove';
-    btn.onclick = () => sendJson({ type: 'adminRemove', id: e.id });
-    li.append(label, btn);
-    adminList.appendChild(li);
-  });
+  lockedFace.classList.toggle('counting', counting);
+  if (!counting) { lockCountAt = 0; return; }
+  if (n === lockCountAt) return;        // same second, let the pop finish
+  lockCountAt = n;
+  lockCount.textContent = n;
+  lockCount.style.animation = 'none';
+  void lockCount.offsetWidth;           // reflow, so each digit replays the pop
+  lockCount.style.animation = '';
 }
 
 const USERNAME_KEY = 'blimp-username';
@@ -1015,7 +929,13 @@ async function bootDonate() {
     if (!cfg.enabled) { donateSay('Donations are not set up yet.', 'bad'); return; }
 
     await loadStripeJs();
-    donateStripe = Stripe(cfg.publishableKey);
+    // Stripe ships a "testing assistant" that floats in the bottom-right corner
+    // of any page with Elements on a sandbox key. It is a developer tool and it
+    // has no business on a site people are actually using, so it is off. It
+    // never appears on live keys either way.
+    donateStripe = Stripe(cfg.publishableKey, {
+      developerTools: { assistant: { enabled: false } },
+    });
     donateElements = donateStripe.elements({
       mode: 'payment',
       amount: donateCents,
@@ -1101,7 +1021,7 @@ function openDonate() { setDonateOpen(true); bootDonate(); }
 function closeDonate() { setDonateOpen(false); }
 function donateIsOpen() { return donateSheet.getAttribute('aria-hidden') === 'false'; }
 
-donateBtn.onclick = e => { e.preventDefault(); openDonate(); };
+donateBtn.onclick = openDonate;
 donateClose.onclick = closeDonate;
 donateSheet.onclick = e => { if (e.target === donateSheet) closeDonate(); };
 addEventListener('keydown', e => {
@@ -1123,7 +1043,6 @@ if (new URLSearchParams(location.search).get('donated')) {
 // out which wallets exist is seconds of work, and doing it on the click meant
 // the donor watched all of it. Now the sheet opens onto finished buttons.
 getDonateConfig().then(cfg => {
-  donateBtn.hidden = !cfg.enabled;
   // once the page has settled - the sky and the socket matter more than a
   // button nobody has pressed yet
   if (cfg.enabled) {
@@ -1140,203 +1059,11 @@ function setHowto(open) {
 // stopPropagation on both openers, or the outside-click handler below sees the
 // same click bubble up and shuts the popover again immediately
 infoBtn.onclick = e => { e.stopPropagation(); setHowto(howto.hidden); };
-aboutBtn.onclick = e => {
-  e.stopPropagation();
-  setHowto(true);
-  // About lives in the footer, which can be a screen away from the popover
-  document.querySelector('.masthead').scrollIntoView({ behavior: 'smooth', block: 'start' });
-};
 addEventListener('click', e => {
   if (!howto.hidden && !howto.contains(e.target)) setHowto(false);
 });
 
-// ---------------- admin ----------------
-adminToggle.onclick = () => {
-  adminLoginPanel.hidden = !adminLoginPanel.hidden;
-  if (!adminLoginPanel.hidden) adminPanel.hidden = true;
-};
-
-adminLoginBtn.onclick = () => {
-  sendJson({ type: 'adminLogin', password: adminPassword.value });
-  adminPassword.value = '';
-};
-adminPassword.addEventListener('keydown', e => { if (e.key === 'Enter') adminLoginBtn.click(); });
-
-adminControlBtn.onclick = () => {
-  const active = latestYou.isAdmin && latestYou.canControl && latestQueue.adminFlying;
-  sendJson({ type: active ? 'adminRelease' : 'adminTakeControl' });
-};
-
-// ---------------- control state ----------------
-// Every input funnels into these, all normalised to -1..1.
-const drivePtr = { x: 0, y: 0 };     // pointer on the joystick
-const driveKey = { x: 0, y: 0 };     // WASD
-let liftPtr = 0, liftKey = 0;
-
-let keyDrive = false, keyLift = false;   // is the keyboard steering right now?
-let dirty = false;                       // sticks moved since the last send
-
-function driveVec() { return keyDrive ? driveKey : drivePtr; }
-function liftVal()  { return keyLift ? liftKey  : liftPtr;  }
-
-// Arcade mix: forward/back on Y, turn on X, scaled down if it would clip.
-function motors() {
-  const v = driveVec();
-  const t = v.y * 100;
-  const s = v.x * 100;
-  let l = t + s, r = t - s;
-  const peak = Math.max(Math.abs(l), Math.abs(r));
-  if (peak > 100) { l = l * 100 / peak; r = r * 100 / peak; }
-  return [Math.round(l), Math.round(r), Math.round(liftVal() * 100)];
-}
-
-function paint() {
-  const v = driveVec();
-
-  const R = padDrive.clientWidth / 2 - 23;
-  knobDrive.style.transform = 'translate(' + (v.x * R) + 'px,' + (-v.y * R) + 'px)';
-
-  const H = padLift.clientHeight / 2 - 23;
-  knobLift.style.transform = 'translate(0,' + (-liftVal() * H) + 'px)';
-
-}
-
-// Throttled transmit: the sticks move continuously, the link need not.
-function flush() {
-  if (!dirty) return;                    // idle: do not stomp on a manual send
-  if (!latestYou.canControl) { dirty = false; return; }
-  const msg = 'm ' + motors().join(' ');
-  if (msg !== lastMsg) { lastMsg = msg; send(msg); }
-  dirty = false;                         // stick state is on the wire; go quiet
-}
-setInterval(flush, 100);                 // 10/s, well under the server's limit
-
-function touched()  { dirty = true; paint(); }
-function released() { dirty = true; paint(); flush(); }   // stop goes out at once
-
-// ---------------- pointer handling ----------------
-function bindPad(pad, onMove, onEnd) {
-  let id = null;
-
-  pad.addEventListener('pointerdown', e => {
-    id = e.pointerId;
-    pad.setPointerCapture(id);
-    onMove(e);
-    touched();
-  });
-
-  pad.addEventListener('pointermove', e => {
-    if (e.pointerId !== id) return;
-    onMove(e);
-    touched();
-  });
-
-  const finish = e => {
-    if (e.pointerId !== id) return;
-    id = null;
-    onEnd();
-    released();
-  };
-  pad.addEventListener('pointerup', finish);
-  pad.addEventListener('pointercancel', finish);
-}
-
-bindPad(padDrive, e => {
-  const b = padDrive.getBoundingClientRect();
-  let x = (e.clientX - b.left - b.width / 2) / (b.width / 2);
-  let y = -(e.clientY - b.top - b.height / 2) / (b.height / 2);
-  const d = Math.hypot(x, y);
-  if (d > 1) { x /= d; y /= d; }          // clamp into the circle
-  drivePtr.x = x; drivePtr.y = y;
-  keyDrive = false;
-}, () => { drivePtr.x = 0; drivePtr.y = 0; });
-
-bindPad(padLift, e => {
-  const b = padLift.getBoundingClientRect();
-  const y = -(e.clientY - b.top - b.height / 2) / (b.height / 2);
-  liftPtr = Math.max(-1, Math.min(1, y));
-  keyLift = false;
-}, () => { liftPtr = 0; });
-
-// ---------------- keyboard ----------------
-const held = Object.create(null);
-
-const DRIVE_KEYS = { w: [0, 1], s: [0, -1], a: [-1, 0], d: [1, 0] };
-const LIFT_KEYS  = { arrowup: 1, arrowdown: -1 };
-
-function recomputeKeys() {
-  let x = 0, y = 0;
-  for (const k in DRIVE_KEYS) {
-    if (held[k]) { x += DRIVE_KEYS[k][0]; y += DRIVE_KEYS[k][1]; }
-  }
-  const d = Math.hypot(x, y);
-  if (d > 1) { x /= d; y /= d; }          // diagonals stay inside the circle
-  driveKey.x = x; driveKey.y = y;
-  keyDrive = (x !== 0 || y !== 0);
-
-  let u = 0;
-  for (const k in LIFT_KEYS) if (held[k]) u += LIFT_KEYS[k];
-  liftKey = Math.max(-1, Math.min(1, u));
-  keyLift = (liftKey !== 0);
-}
-
-function keysBlocked(e) {
-  if (donateIsOpen() || !howto.hidden) return true;   // an overlay is up
-  const t = e.target;
-  return t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA');
-}
-
-addEventListener('keydown', e => {
-  if (keysBlocked(e)) return;
-  const k = e.key.toLowerCase();
-  if (!(k in DRIVE_KEYS) && !(k in LIFT_KEYS)) return;
-  e.preventDefault();
-  if (held[k]) return;                    // ignore auto-repeat
-  held[k] = true;
-  recomputeKeys();
-  touched();
-});
-
-addEventListener('keyup', e => {
-  const k = e.key.toLowerCase();
-  if (!(k in DRIVE_KEYS) && !(k in LIFT_KEYS)) return;
-  e.preventDefault();
-  held[k] = false;
-  recomputeKeys();
-  released();
-});
-
-// Losing focus mid-press would otherwise latch a key on forever.
-addEventListener('blur', () => {
-  for (const k in held) held[k] = false;
-  recomputeKeys();
-  released();
-});
-
-// ---------------- manual entry ----------------
-function clamp(el) {
-  let v = parseInt(el.value, 10);
-  if (isNaN(v)) v = 0;
-  v = Math.max(-100, Math.min(100, v));
-  el.value = v;
-  return v;
-}
-
-function sendManual() {
-  if (!latestYou.canControl) return;
-  const v = ['l', 'r', 'u'].map(id => clamp(document.getElementById(id)));
-  const msg = 'm ' + v.join(' ');
-  if (msg === lastMsg) return;
-  lastMsg = msg;
-  send(msg);
-}
-
-['l', 'r', 'u'].forEach(id => {
-  document.getElementById(id).addEventListener('change', sendManual);
-});
-document.getElementById('send').onclick = sendManual;
-
-paint();
+blimpStart();
 </script>
 </body>
 </html>

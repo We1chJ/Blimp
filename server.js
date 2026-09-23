@@ -68,6 +68,7 @@ const CACHEABLE = /\.(mp4|jpg|jpeg|png|webp|svg|ico|woff2?)$/i;
 
 app.use(express.static(path.join(__dirname, 'public'), {
   dotfiles: 'allow',
+  extensions: ['html'],   // so /admin serves admin.html
   setHeaders(res, filePath) {
     // The page carries all the markup, CSS and JS, so it IS the deploy: it has
     // to revalidate every time or a cached copy keeps running old code against
@@ -184,7 +185,19 @@ function broadcastQueue() {
   });
 }
 
-const fq = new FlightQueue(broadcastQueue);
+// Whenever control changes hands (turn timed out, pilot left or was removed,
+// admin took over or let go), stop the motors. Otherwise the last command
+// the old pilot sent keeps running: the keepalive pings stop the firmware's
+// failsafe from ever tripping.
+let lastController = null;
+const fq = new FlightQueue(() => {
+  const now = fq.controller();
+  if (now !== lastController) {
+    lastController = now;
+    cq.urgent('s');
+  }
+  broadcastQueue();
+});
 setInterval(() => fq.tick(), 250);
 setInterval(broadcastQueue, 1000);
 

@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Blimp admin</title>
+<style>
+  :root {
+    --ink:        #1c2630;
+    --ink-strong: #172430;
+    --ink-soft:   rgba(28,38,48,.85);
+    --ink-muted:  rgba(77,92,102,.85);
+    --glass:      rgba(255,255,255,.55);
+    --glass-thin: rgba(255,255,255,.32);
+    --glass-edge: rgba(255,255,255,.8);
+    --shadow:     0 6px 20px -4px rgba(0,20,41,.22);
+    --green:      #29c780;
+    --green-deep: #179959;
+    --green-mid:  #33d98c;
+    --green-ink:  #1fbd7a;
+    --orange:     #ff7a45;
+    --danger:     #e5484d;
+    --danger-ink: #b9282d;
+    --blue:       #3b8ef0;
+    --blue-ink:   #1a5fb4;
+    --radius:     26px;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    padding: 0 20px;
+    color: var(--ink);
+    font: 13px/1.4 "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    display: flex; flex-direction: column;
+  }
+  /* moving sky behind everything, so the glass has something to refract */
+  #bg {
+    position: fixed; inset: 0; z-index: -2;
+    width: 100%; height: 100%; object-fit: cover;
+  }
+  /* scrim lifts the dark lower half so one clear material stays legible */
+  body::before {
+    content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background: linear-gradient(180deg, rgba(255,255,255,0) 38%, rgba(255,255,255,.34));
+  }
+  /* poster/fallback if the video never plays */
+  body { background: #9db6cc url('sky.jpg') center/cover no-repeat fixed; }
+  @media (prefers-reduced-motion: reduce) { #bg { display: none; } }
+
+  /* The footer is the bottom of the page. Everything that used to sit under it
+     - the status card, the admin login, the manual voltage box - is in the
+     admin sheet now, so there is nothing left to scroll to. */
+  html, body { overflow: hidden; }
+  .wrap {
+    width: 100%; max-width: 375px; margin: 0 auto;
+    height: 100dvh; padding-top: max(14px, env(safe-area-inset-top));
+    display: flex; flex-direction: column; min-height: 0;
+  }
+
+  /* liquid glass: blurred + saturated backdrop, a glossy sheen baked into the
+     background, a bright top rim and a soft float shadow */
+  .glass, .glassy {
+    position: relative; isolation: isolate;
+    background: rgba(255,255,255,.16);
+    border: 1px solid rgba(255,255,255,.5);
+    -webkit-backdrop-filter: blur(14px) saturate(185%); backdrop-filter: blur(14px) saturate(185%);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.9),            /* top rim light */
+      inset 2px 0 2px -2px rgba(255,255,255,.75),    /* left bevel */
+      inset -2px 0 2px -2px rgba(255,255,255,.75),   /* right bevel */
+      inset 0 -1px 1px rgba(255,255,255,.35),        /* bottom rim */
+      inset 0 -10px 22px -14px rgba(0,25,50,.5),     /* inner depth */
+      0 10px 30px -10px rgba(0,20,41,.32);           /* float */
+  }
+  /* inner caustic: a soft dark halo that makes the pane feel thick */
+  .glass::before {
+    content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+    border-radius: inherit; filter: blur(8px);
+    box-shadow: inset 0 0 16px rgba(0,30,60,.28);
+  }
+  /* diagonal perimeter sheen, the giveaway of a curved glass edge */
+  .glass::after {
+    content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+    border-radius: inherit; filter: blur(7px);
+    background: linear-gradient(135deg,
+      rgba(255,255,255,.8) 0%, rgba(255,255,255,0) 26%,
+      rgba(255,255,255,0) 74%, rgba(255,255,255,.5) 100%);
+  }
+
+
+  /* ---------- controls ---------- */
+  /* the side padding is the admin bubble's inner gutter - it lives here rather
+     than on the bubble so the sticks don't shift when the bubble appears */
+  .control-panel {
+    position: relative; isolation: isolate; width: 100%;
+    border-radius: var(--radius); overflow: hidden;
+  }
+  .controls {
+    position: relative; isolation: isolate; width: 100%; flex: none; display: flex; align-items: flex-end; justify-content: space-between; gap: 10px;
+    padding: 18px 16px 14px;
+  }
+  .stack { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+
+  /* on the panel's glass now, not straight on the photo, so they no longer
+     need a halo to survive whatever drifts past behind them */
+  .stick-label {
+    font-size: 12px; font-weight: 700; letter-spacing: .02em;
+    color: var(--ink-soft);
+  }
+
+  /* drive joystick */
+  #padDrive {
+    flex: none; width: 112px; height: 112px; border-radius: 50%;
+    touch-action: none; cursor: grab; overflow: hidden;
+  }
+  #padDrive .ring {
+    position: absolute; left: 50%; top: 50%; width: 90px; height: 90px;
+    margin: -45px 0 0 -45px; border-radius: 50%; pointer-events: none;
+    border: 1px solid rgba(255,255,255,.4);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.5);
+  }
+  /* the knobs are glass too, just a touch denser so they read as objects
+     sitting on the pad rather than holes in it */
+  #knobDrive {
+    position: absolute; left: 50%; top: 50%; width: 46px; height: 46px; margin: -23px 0 0 -23px;
+    border-radius: 50%; pointer-events: none;
+  }
+
+  /* altitude slider */
+  #padLift {
+    flex: none; width: 56px; height: 112px; border-radius: 28px;
+    touch-action: none; cursor: grab; overflow: hidden;
+  }
+  #padLift .tick {
+    position: absolute; left: 50%; margin-left: -5px; width: 0; height: 0;
+    border-left: 5px solid transparent; border-right: 5px solid transparent;
+    pointer-events: none;
+  }
+  #padLift .tick.up   { top: 7px;    border-bottom: 7px solid rgba(28,38,48,.35); }
+  #padLift .tick.down { bottom: 7px; border-top: 7px solid rgba(28,38,48,.35); }
+  #knobLift {
+    position: absolute; left: 50%; top: 50%; width: 38px; height: 38px; margin: -19px 0 0 -19px;
+    border-radius: 50%; pointer-events: none;
+  }
+
+  #knobDrive, #knobLift {
+    background: rgba(255,255,255,.26);
+    border-color: rgba(255,255,255,.7);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.95),
+      inset 2px 0 2px -2px rgba(255,255,255,.8),
+      inset -2px 0 2px -2px rgba(255,255,255,.8),
+      inset 0 -8px 16px -12px rgba(0,25,50,.55),
+      0 6px 16px -5px rgba(0,20,41,.35);
+  }
+  /* lighter inner layers on the knobs - these repaint on every stick move */
+  #knobDrive::before, #knobLift::before { filter: blur(5px); }
+  #knobDrive::after,  #knobLift::after  { filter: blur(4px); }
+
+
+  .controls.locked { opacity: .45; }
+  .controls.locked #padDrive, .controls.locked #padLift { pointer-events: none; }
+  .controls.admin-flying { pointer-events: none; }
+
+  /* the whole surface turns to liquid while the admin flies */
+  body.liquified .glass:not(#knobDrive):not(#knobLift):not(.numeral):not(.control-panel) {
+    -webkit-backdrop-filter: blur(20px) saturate(215%); backdrop-filter: blur(20px) saturate(215%);
+    animation: liquidWobble 5.5s ease-in-out infinite;
+  }
+  @keyframes liquidWobble {
+    0%, 100% { transform: translateY(0) skewX(0deg) scaleY(1); }
+    33%      { transform: translateY(-1.5px) skewX(.35deg) scaleY(1.008); }
+    66%      { transform: translateY(1.5px) skewX(-.35deg) scaleY(.994); }
+  }
+
+
+
+  .admin-panel { margin: 0 0 16px; border-radius: 18px; overflow: hidden; }
+  .admin-panel h2 {
+    margin: 0; padding: 10px 14px; border-bottom: 1px solid rgba(26,38,51,.08);
+    font-size: 11px; font-weight: 700; color: rgba(38,51,64,.9);
+  }
+  .admin-login { display: flex; gap: 8px; padding: 12px 14px; }
+  .admin-login input {
+    flex: 1; min-width: 0; padding: 9px 12px; border-radius: 12px;
+    background: rgba(255,255,255,.7); border: 1px solid rgba(255,255,255,.85);
+    font: 13px "Inter", system-ui, sans-serif; color: var(--ink);
+  }
+  .admin-login input:focus { outline: none; border-color: var(--green); }
+  .admin-error { margin: 0; padding: 0 14px 12px; font-size: 12px; font-weight: 600; color: var(--danger); }
+
+  .admin-list { list-style: none; margin: 0; padding: 0; }
+  .admin-list li {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    padding: 9px 14px; border-bottom: 1px solid rgba(26,38,51,.08); font-size: 13px;
+  }
+  .admin-list .remove {
+    padding: 4px 10px; border-radius: 10px; cursor: pointer;
+    background: rgba(255,255,255,.6); border: 1px solid rgba(229,72,77,.4); color: var(--danger);
+    font: 700 11px "Inter", system-ui, sans-serif;
+  }
+  .admin-control { padding: 12px 14px; }
+  .admin-control button.taking { background: var(--danger); border-color: rgba(255,255,255,.6); color: #fff; }
+
+  .manual { padding: 0 14px 14px; }
+  .manual h2 { padding: 0 0 8px; border: none; font-size: 11px; color: var(--ink-muted); }
+  .mrow { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
+  .mrow label { width: 46px; font-size: 12px; font-weight: 600; color: var(--ink-muted); }
+  .mrow input {
+    flex: 1; min-width: 0; padding: 7px 10px; border-radius: 10px;
+    background: rgba(255,255,255,.7); border: 1px solid rgba(255,255,255,.85);
+    font: 12px "Inter", system-ui, sans-serif; color: var(--ink);
+  }
+  #send {
+    width: 100%; margin-top: 4px; padding: 9px; border-radius: 12px; cursor: pointer;
+    background: rgba(255,255,255,.6); border: 1px solid rgba(255,255,255,.85);
+    font: 700 12px "Inter", system-ui, sans-serif; color: rgba(38,51,64,.9);
+  }
+  .manual.locked { opacity: .45; pointer-events: none; }
+
+
+  /* ---------- carried over from the public page ---------- */
+  /* These came across as markup but not as rules, so the buttons fell back to
+     the browser's own chrome - square, grey, nothing like the rest. */
+  .wordmark { margin: 0; font-size: 21px; font-weight: 700; color: var(--ink-strong); letter-spacing: -.01em; }
+  .btn {
+    flex: none; padding: 9px 16px; border-radius: 12px; cursor: pointer;
+    border: 1px solid rgba(255,255,255,.85); background: rgba(255,255,255,.6);
+    font: 700 12px "Inter", system-ui, sans-serif; color: rgba(38,51,64,.9);
+  }
+  .btn.go {
+    background: linear-gradient(168deg, rgba(255,255,255,.75), rgba(255,255,255,.35));
+    border-color: rgba(255,255,255,.9); color: var(--ink);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.95), 0 4px 12px -4px rgba(0,20,41,.25);
+  }
+  .btn.go:active { background: rgba(255,255,255,.5); }
+  .dot {
+    display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    background: rgba(28,38,48,.3); vertical-align: middle;
+  }
+  .dot.on { background: var(--green); box-shadow: 0 0 6px rgba(41,199,128,.7); }
+
+  /* ---------- admin page ---------- */
+  /* The public page pins itself to one screen and hides its overflow. This one
+     is a stack of panels that genuinely needs to scroll - inheriting that rule
+     put Send all past the bottom edge with no way to reach it. */
+  html, body { overflow: auto; }
+  .wrap {
+    height: auto; min-height: 100dvh;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+  /* one gap between every panel, rather than 10/12/16/18 */
+  .gate, .readout, .control-panel, #console > .admin-panel { margin: 12px 0 0; }
+  .admin-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .admin-top a { font-size: 11px; font-weight: 600; color: rgba(51,66,82,.85); }
+
+  /* Shown until the password lands. Everything past it is inert anyway - the
+     server gates on ws.isAdmin, not on what this page chooses to render - but
+     there is no reason to put controls in front of someone who cannot use them. */
+  .gate { margin-top: 18px; }
+  .gate .admin-login { padding: 0; }
+
+  .live { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 600; color: var(--ink-soft); }
+  .readout {
+    margin-top: 10px; padding: 9px 12px; border-radius: 14px;
+    display: grid; gap: 3px; font-size: 11px; color: var(--ink-muted);
+  }
+
+  .control-panel {
+    position: relative; isolation: isolate; width: 100%;
+    border-radius: var(--radius); overflow: hidden; margin-top: 12px;
+  }
+  .panel-head {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 9px 14px; text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,.5);
+    font-size: 11px; font-weight: 700; line-height: 1.35;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.85);
+    background: rgba(219,234,255,.6); color: var(--blue-ink);
+  }
+  .panel-head::before {
+    content: ''; flex: none; width: 7px; height: 7px; border-radius: 50%; background: currentColor;
+  }
+  .panel-head.flying { background: rgba(255,210,212,.62); color: var(--danger-ink); }
+</style>
+</head>
+<body>
+<video id="bg" autoplay muted loop playsinline preload="none" poster="sky.jpg"></video>
+
+<div class="wrap">
+  <div class="admin-top">
+    <h1 class="wordmark">Blimp admin</h1>
+    <a href="/">&larr; Public page</a>
+  </div>
+
+  <div class="gate" id="gate">
+    <div class="admin-panel glass">
+      <h2>Admin login</h2>
+      <div class="admin-login">
+        <input id="adminPassword" type="password" placeholder="Password" autocomplete="current-password">
+        <button class="btn go" id="adminLoginBtn">Log in</button>
+      </div>
+      <p class="admin-error" id="adminError" hidden>Wrong password</p>
+    </div>
+  </div>
+
+  <div id="console" hidden>
+    <div class="readout glass">
+      <div class="live"><span class="dot" id="dot"></span><span id="statusText">Connecting&hellip;</span></div>
+      <div id="depth">Command queue: idle</div>
+      <div id="state">Device state: &mdash;</div>
+    </div>
+
+    <div class="control-panel glass">
+      <div class="panel-head" id="panelHead">Spectating &mdash; take control to fly</div>
+      <div class="controls" id="controls">
+        <div class="stack">
+          <div class="pad glass" id="padDrive">
+            <span class="ring"></span>
+            <span id="knobDrive" class="glass"></span>
+          </div>
+          <span class="stick-label">Joystick</span>
+        </div>
+        <div class="stack">
+          <div class="pad glass" id="padLift">
+            <span class="tick up"></span>
+            <span class="tick down"></span>
+            <span id="knobLift" class="glass"></span>
+          </div>
+          <span class="stick-label">Altitude</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-panel glass" id="adminPanel">
+      <h2>Queue</h2>
+      <ul class="admin-list" id="adminList"></ul>
+      <div class="admin-control">
+        <button class="btn" id="adminControlBtn">Take control</button>
+      </div>
+
+      <div class="manual" id="manual">
+        <h2>Manual voltage</h2>
+        <div class="mrow"><label>Left</label><input id="l" type="number" min="-100" max="100" value="0"></div>
+        <div class="mrow"><label>Right</label><input id="r" type="number" min="-100" max="100" value="0"></div>
+        <div class="mrow"><label>Lift</label><input id="u" type="number" min="-100" max="100" value="0"></div>
+        <button id="send">Send all</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="blimp-core.js"></script>
+<script>
+// ---------------- server messages ----------------
+function onBlimpMessage(m) {
+  if (m.type === 'adminAuth') {
+    adminError.hidden = m.ok;
+    if (m.ok) adminPassword.value = '';
+  }
+  if (m.type === 'queue' || m.type === 'you') render();
+}
+// nothing here swallows the keyboard except a focused field, which the core
+// already handles
+function blimpKeysBlocked() { return false; }
+
+// ---------------- render ----------------
+function render() {
+  const isAdmin = latestYou.isAdmin;
+  gate.hidden = isAdmin;
+  document.getElementById('console').hidden = !isAdmin;
+  if (!isAdmin) return;
+
+  const flying = latestYou.canControl;
+  panelHead.textContent = flying ? 'You have control' : 'Spectating \u2014 take control to fly';
+  panelHead.classList.toggle('flying', flying);
+  controls.classList.toggle('locked', !flying);
+  manual.classList.toggle('locked', !flying);
+
+  const overriding = flying && latestQueue.adminFlying;
+  adminControlBtn.textContent = overriding ? 'Release control' : 'Take control';
+  adminControlBtn.classList.toggle('taking', overriding);
+
+  renderList();
+}
+
+function renderList() {
+  adminList.innerHTML = '';
+  const rows = [];
+  if (latestQueue.current) rows.push({ ...latestQueue.current, tag: 'flying' });
+  for (const e of latestQueue.waiting) rows.push(e);
+
+  if (!rows.length) {
+    const li = document.createElement('li');
+    li.textContent = 'Queue is empty';
+    adminList.appendChild(li);
+    return;
+  }
+  for (const e of rows) {
+    const li = document.createElement('li');
+    const label = document.createElement('span');
+    label.textContent = e.username + (e.tag === 'flying' ? ' (flying)' : '');
+    const btn = document.createElement('button');
+    btn.className = 'remove';
+    btn.textContent = 'Remove';
+    btn.onclick = () => sendJson({ type: 'adminRemove', id: e.id });
+    li.append(label, btn);
+    adminList.appendChild(li);
+  }
+}
+
+// ---------------- actions ----------------
+adminLoginBtn.onclick = () => {
+  sendJson({ type: 'adminLogin', password: adminPassword.value });
+};
+adminPassword.addEventListener('keydown', e => { if (e.key === 'Enter') adminLoginBtn.click(); });
+
+adminControlBtn.onclick = () => {
+  const active = latestYou.canControl && latestQueue.adminFlying;
+  sendJson({ type: active ? 'adminRelease' : 'adminTakeControl' });
+};
+
+// ---------------- manual entry ----------------
+function clampField(el) {
+  let v = parseInt(el.value, 10);
+  if (isNaN(v)) v = 0;
+  v = Math.max(-100, Math.min(100, v));
+  el.value = v;
+  return v;
+}
+function sendManual() {
+  if (!latestYou.canControl) return;
+  const v = ['l', 'r', 'u'].map(id => clampField(document.getElementById(id)));
+  const msg = 'm ' + v.join(' ');
+  if (msg === lastMsg) return;
+  lastMsg = msg;
+  send(msg);
+}
+['l', 'r', 'u'].forEach(id => document.getElementById(id).addEventListener('change', sendManual));
+document.getElementById('send').onclick = sendManual;
+
+// the sky is decoration; it can wait for everything that is not
+addEventListener('load', () => {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const source = document.createElement('source');
+  source.src = 'clouds.mp4'; source.type = 'video/mp4';
+  bg.appendChild(source);
+  bg.load();
+  const p = bg.play();
+  if (p) p.catch(() => {});
+}, { once: true });
+
+blimpStart();
+render();
+</script>
+</body>
+</html>
