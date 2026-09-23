@@ -55,6 +55,13 @@
     content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
     background: linear-gradient(180deg, rgba(255,255,255,0) 38%, rgba(255,255,255,.34));
   }
+  /* A veil over the sky. It sits above #bg but below the glass, so it dims the
+     video and the still it falls back to alike - filtering #bg alone would
+     leave the reduced-motion fallback at full brightness. */
+  body::after {
+    content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background: rgba(12,24,40,.2);
+  }
   /* poster/fallback if the video never plays */
   body { background: #9db6cc url('sky.jpg') center/cover no-repeat fixed; }
   @media (prefers-reduced-motion: reduce) { #bg { display: none; } }
@@ -101,8 +108,13 @@
 
 
   /* Real refraction: bend the backdrop through a noise displacement map.
-     Only Chromium honours url() in backdrop-filter - Safari keeps the blur
-     above and simply skips this, which still reads as glass. */
+     Gated on a feature query that only Chromium should pass - but @supports
+     tests whether a value PARSES, and url() is valid syntax for this property
+     everywhere. Safari says yes, takes the declaration, then cannot apply an
+     SVG filter to a backdrop and draws no blur at all, which is why the glass
+     went clear on iOS while looking right on the desktop. The panes below
+     therefore carry enough fill of their own to read as a material with no
+     blur behind them at all. */
   @supports (backdrop-filter: url(#lgDisplace)) {
     .glass, .glassy {
       -webkit-backdrop-filter: blur(11px) saturate(185%) url(#lgDisplace);
@@ -132,7 +144,12 @@
     position: absolute; z-index: 70; top: calc(100% + 10px); right: 0;
     width: min(320px, calc(100vw - 40px));
     padding: 14px 16px 16px; border-radius: 20px;
-    background: rgba(255,255,255,.72);
+    /* Nearly opaque on purpose. Every other pane floats over the sky, but this
+       one lands on the queue card, and at .72 the names and times behind it
+       read straight through - worse still anywhere backdrop-filter is not
+       honoured, where the blur that was hiding them does not happen at all. */
+    background: rgba(255,255,255,.95);
+    box-shadow: 0 18px 40px -12px rgba(0,20,41,.45);
     transform-origin: top right;
     animation: howtoPop .22s cubic-bezier(.22,1,.36,1) both;
   }
@@ -171,7 +188,6 @@
   .now-row .fill {
     position: absolute; left: 0; top: 0; bottom: 0; width: 0;
     background: rgba(255,255,255,.5); border-right: 2px solid rgba(255,255,255,.95);
-    transition: width .4s linear;
   }
   .now-row > *:not(.fill) { position: relative; }
   .now-row .who { flex: 1; min-width: 0; }
@@ -273,7 +289,12 @@
   .controls {
     position: relative; isolation: isolate; width: 100%; flex: none; display: flex; align-items: flex-end; justify-content: space-between; gap: 10px;
     padding: 18px 16px 14px;
+    background: rgba(226,233,241,.5);
   }
+  /* Locked, the panel is nearly all empty space with a lock in it, so it needs
+     to be a surface rather than a window - and it cannot get that from a blur
+     that may never run. */
+  .controls.locked, .controls.admin-flying { background: rgba(222,230,239,.82); }
   .stack { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 
   /* on the panel's glass now, not straight on the photo, so they no longer
@@ -370,9 +391,15 @@
     display: block;
     animation: countPop .95s cubic-bezier(.22,1,.36,1) both;
   }
+  @keyframes countPop {
+    0%   { transform: scale(.55); opacity: 0; filter: blur(10px); }
+    28%  { transform: scale(1.1);  opacity: 1; filter: blur(0); }
+    68%  { transform: scale(1);    opacity: 1; filter: blur(0); }
+    100% { transform: scale(.92);  opacity: 0; filter: blur(7px); }
+  }
 
   /* the whole surface turns to liquid while the admin flies */
-  body.liquified .glass:not(#knobDrive):not(#knobLift):not(.numeral):not(.control-panel) {
+  body.liquified .glass:not(#knobDrive):not(#knobLift):not(.control-panel) {
     -webkit-backdrop-filter: blur(20px) saturate(215%); backdrop-filter: blur(20px) saturate(215%);
     animation: liquidWobble 5.5s ease-in-out infinite;
   }
@@ -382,28 +409,10 @@
     66%      { transform: translateY(1.5px) skewX(-.35deg) scaleY(.994); }
   }
   @supports (backdrop-filter: url(#lgLiquid)) {
-    body.liquified .glass:not(#knobDrive):not(#knobLift):not(.numeral):not(.control-panel) {
+    body.liquified .glass:not(#knobDrive):not(#knobLift):not(.control-panel) {
       -webkit-backdrop-filter: blur(14px) saturate(215%) url(#lgLiquid);
       backdrop-filter: blur(14px) saturate(215%) url(#lgLiquid);
     }
-  }
-
-  /* ---------- 3-2-1 ---------- */
-  .countdown {
-    position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; pointer-events: none;
-  }
-  .countdown .numeral {
-    width: 148px; height: 148px; border-radius: 50%;
-    display: grid; place-items: center;
-    font: 700 84px/1 "Inter", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-    color: rgba(255,255,255,.92); text-shadow: 0 2px 18px rgba(0,20,41,.45);
-    animation: countPop .95s cubic-bezier(.22,1,.36,1) both;
-  }
-  @keyframes countPop {
-    0%   { transform: scale(.55); opacity: 0; filter: blur(10px); }
-    28%  { transform: scale(1.1);  opacity: 1; filter: blur(0); }
-    68%  { transform: scale(1);    opacity: 1; filter: blur(0); }
-    100% { transform: scale(.92);  opacity: 0; filter: blur(7px); }
   }
 
   /* The head of the panel, tinted to whoever has the blimp: blue while you
@@ -551,8 +560,6 @@
     <feDisplacementMap in="SourceGraphic" in2="soft" scale="44" xChannelSelector="R" yChannelSelector="G"/>
   </filter>
 </svg>
-
-<div class="countdown" id="countdown" hidden><span class="numeral glass" id="countdownNum">3</span></div>
 
 <div class="wrap">
 
@@ -716,6 +723,29 @@ function fmtWait(ms) {
   return s < 60 ? '~' + s + ' sec wait' : '~' + Math.round(s / 60) + ' min wait';
 }
 
+// The server sends the clock once a second, so setting the bar straight from
+// it steps once a second - and a CSS transition only turns that into a stall
+// followed by a lurch whenever a broadcast lands early or late. Take the
+// server's reading as a fix, then run the bar off the local clock between
+// them, which is what makes it look continuous.
+let fillFix = { msLeft: 0, turnMs: 1, paused: true, at: 0 };
+let fillRaf = 0;
+
+function setFill(msLeft, turnMs, paused) {
+  fillFix = { msLeft, turnMs: turnMs || 1, paused: !!paused, at: performance.now() };
+  if (!fillRaf) fillRaf = requestAnimationFrame(stepFill);
+}
+
+function stepFill() {
+  const f = fillFix;
+  // paused means an admin took over and the turn's clock is held, so the bar
+  // holds with it rather than draining behind the scenes
+  const elapsed = f.paused ? 0 : performance.now() - f.at;
+  const left = Math.max(0, f.msLeft - elapsed);
+  nowFill.style.width = Math.max(0, Math.min(100, left / f.turnMs * 100)) + '%';
+  fillRaf = (left > 0 && !f.paused) ? requestAnimationFrame(stepFill) : 0;
+}
+
 function renderQueue() {
   const q = latestQueue;
   const youFlying = latestYou.state === 'flying';
@@ -726,13 +756,13 @@ function renderQueue() {
     nowName.textContent = youFlying ? 'You' : q.current.username;
     nowSub.textContent = q.current.paused ? 'Paused — admin flying' : 'Flying now';
     nowLeft.textContent = fmtTime(q.current.msLeft) + ' left';
-    nowFill.style.width = Math.max(0, Math.min(100, q.current.msLeft / q.turnMs * 100)) + '%';
+    setFill(q.current.msLeft, q.turnMs, q.current.paused);
   } else {
     nowAvatar.hidden = true;
     nowName.textContent = 'Nobody flying';
     nowSub.textContent = '';
     nowLeft.textContent = '';
-    nowFill.style.width = '0%';
+    setFill(0, 1, true);
   }
   adminFlyingNote.hidden = !q.adminFlying;
 
@@ -801,7 +831,6 @@ function renderYou() {
   sticksNote.hidden = false;
 
 
-  renderCountdown();
   renderQueue();   // whether a row reads "You" depends on your own state
 }
 
@@ -824,28 +853,6 @@ function renderLockFace(y) {
   void lockCount.offsetWidth;           // reflow, so each digit replays the pop
   lockCount.style.animation = '';
 }
-
-// Flash 3-2-1 in the middle of the screen when your turn is about to end.
-let countdownAt = 0;
-function renderCountdown() {
-  const y = latestYou;
-  const imminent = y.state === 'flying';   // the panel counts you in; this counts you out
-  const n = imminent ? Math.ceil(y.msLeft / 1000) : 0;
-
-  if (n < 1 || n > 3) {
-    countdown.hidden = true;
-    countdownAt = 0;
-    return;
-  }
-  if (n === countdownAt) return;        // same second, let the animation finish
-  countdownAt = n;
-  countdown.hidden = false;
-  countdownNum.textContent = n;
-  countdownNum.style.animation = 'none';
-  void countdownNum.offsetWidth;        // reflow, so the pop replays per digit
-  countdownNum.style.animation = '';
-}
-
 
 const USERNAME_KEY = 'blimp-username';
 usernameInput.value = localStorage.getItem(USERNAME_KEY) || '';
