@@ -35,13 +35,6 @@ const int   WS_PORT   = 443;
 const char* WS_PATH   = "/device?token=" DEVICE_TOKEN_VALUE;
 const bool  WS_SECURE = true;
 
-// Command 100% drives each motor at this fraction of full power.
-// Kept separate per motor so one over/under-powered motor can be trimmed
-// without touching the UI, the protocol, or the other two. 100 = full power.
-const int SPEED_SCALE_L = 50;   // percent, left
-const int SPEED_SCALE_R = 50;   // percent, right
-const int SPEED_SCALE_U = 50;   // percent, lift
-
 const unsigned long FAILSAFE_MS   = 2000;   // stop if the link goes quiet
 const unsigned long WIFI_CHECK_MS = 5000;   // how often to re-check WiFi
 const unsigned long WS_REVIVE_MS  = 8000;   // silent this long: force a reconnect
@@ -64,9 +57,9 @@ unsigned long lastWifiCheck = 0;
 unsigned long lastLinkOk    = 0;
 bool linkUp = false;
 
-void setMotor(int in1, int in2, int percent, int scale) {
+void setMotor(int in1, int in2, int percent) {
   percent = constrain(percent, -100, 100);
-  int pwm = map(abs(percent), 0, 100, 0, 255) * scale / 100;
+  int pwm = map(abs(percent), 0, 100, 0, 255);
 
   if (percent >= 0) {          // forward
     analogWrite(in1, pwm);
@@ -78,9 +71,9 @@ void setMotor(int in1, int in2, int percent, int scale) {
 }
 
 void applySpeeds() {
-  setMotor(LIN1, LIN2, speedL, SPEED_SCALE_L);
-  setMotor(RIN1, RIN2, speedR, SPEED_SCALE_R);
-  setMotor(UIN1, UIN2, speedU, SPEED_SCALE_U);
+  setMotor(LIN1, LIN2, speedL);
+  setMotor(RIN1, RIN2, speedR);
+  setMotor(UIN1, UIN2, speedU);
 
   Serial.printf("L=%d%%  R=%d%%  U=%d%%\n", speedL, speedR, speedU);
 
@@ -93,9 +86,9 @@ void applySpeeds() {
 
 void stopAll() {
   speedL = speedR = speedU = 0;
-  setMotor(LIN1, LIN2, 0, SPEED_SCALE_L);
-  setMotor(RIN1, RIN2, 0, SPEED_SCALE_R);
-  setMotor(UIN1, UIN2, 0, SPEED_SCALE_U);
+  setMotor(LIN1, LIN2, 0);
+  setMotor(RIN1, RIN2, 0);
+  setMotor(UIN1, UIN2, 0);
 }
 
 void handleCommand(String cmd) {
@@ -228,7 +221,8 @@ void setup() {
 
   int pins[] = { LIN1, LIN2, RIN1, RIN2, UIN1, UIN2 };
   for (int i = 0; i < 6; i++) pinMode(pins[i], OUTPUT);
-  stopAll();                       // claims all six LEDC channels up front
+  analogWriteFrequency(25000);     // default is 1 kHz, which whines; 25 kHz is above hearing
+  stopAll();                      // claims all six LEDC channels up front
 
   startWifi();
 
