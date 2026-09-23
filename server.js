@@ -185,7 +185,19 @@ function broadcastQueue() {
   });
 }
 
-const fq = new FlightQueue(broadcastQueue);
+// Whenever control changes hands (turn timed out, pilot left or was removed,
+// admin took over or let go), stop the motors. Otherwise the last command
+// the old pilot sent keeps running: the keepalive pings stop the firmware's
+// failsafe from ever tripping.
+let lastController = null;
+const fq = new FlightQueue(() => {
+  const now = fq.controller();
+  if (now !== lastController) {
+    lastController = now;
+    cq.urgent('s');
+  }
+  broadcastQueue();
+});
 setInterval(() => fq.tick(), 250);
 setInterval(broadcastQueue, 1000);
 
