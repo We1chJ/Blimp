@@ -92,7 +92,7 @@ function liftVal()  { return keyLift ? liftKey  : liftPtr;  }
 // flies indoors and drifts for a long time after a nudge, so the sticks are
 // deliberately gentle: 1.0 here would be the old behaviour. Applied after the
 // arcade mix so turning authority scales with everything else.
-const STICK_POWER = 0.2;
+const STICK_POWER = 0.6;
 
 // Arcade mix: forward/back on Y, turn on X, scaled down if it would clip.
 function motors() {
