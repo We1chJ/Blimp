@@ -93,6 +93,9 @@ function liftVal()  { return keyLift ? liftKey  : liftPtr;  }
 // deliberately gentle: 1.0 here would be the old behaviour. Applied after the
 // arcade mix so turning authority scales with everything else.
 const STICK_POWER = 0.6;
+// The lift slider gets its own: at the drive sticks' setting it couldn't
+// climb fast enough, so it has the full range.
+const LIFT_POWER = 1.0;
 
 // Arcade mix: forward/back on Y, turn on X, scaled down if it would clip.
 function motors() {
@@ -105,7 +108,7 @@ function motors() {
   return [
     Math.round(l * STICK_POWER),
     Math.round(r * STICK_POWER),
-    Math.round(liftVal() * 100 * STICK_POWER),
+    Math.round(liftVal() * 100 * LIFT_POWER),
   ];
 }
 
