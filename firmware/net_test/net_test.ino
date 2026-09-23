@@ -10,7 +10,7 @@
 
 const char* WIFI_SSID = "OLIN-VISITOR";
 const char* WIFI_PASS = "";
-const char* WS_HOST   = "blimp-wue5.onrender.com";
+const char* WS_HOST   = "blimp-byal.onrender.com";
 
 void startWifi() {
   if (strlen(WIFI_PASS) == 0) WiFi.begin(WIFI_SSID);

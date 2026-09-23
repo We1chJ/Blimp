@@ -28,7 +28,7 @@
 const char* WIFI_SSID = WIFI_SSID_VALUE;
 const char* WIFI_PASS = WIFI_PASS_VALUE;
 
-const char* WS_HOST   = "blimp-wue5.onrender.com";  // no https://, no path
+const char* WS_HOST   = "blimp-byal.onrender.com";  // no https://, no path
 const int   WS_PORT   = 443;
 // The server authenticates /device against DEVICE_TOKEN and refuses the
 // upgrade without a match, so the token rides along in the query string.
