@@ -5,3 +5,6 @@ node_modules/
 
 .DS_Store
 install.log
+
+# board credentials and the device token
+firmware/*/secrets.h

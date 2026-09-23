@@ -20,13 +20,19 @@
 #include <esp_system.h>
 #include <WebSocketsClient.h>
 
+// Credentials live in secrets.h, which is gitignored. Copy secrets.example.h
+// to secrets.h and fill it in before flashing.
+#include "secrets.h"
+
 // ---------- config ----------
-const char* WIFI_SSID = "OLIN-VISITOR";
-const char* WIFI_PASS = "";              // open network
+const char* WIFI_SSID = WIFI_SSID_VALUE;
+const char* WIFI_PASS = WIFI_PASS_VALUE;
 
 const char* WS_HOST   = "blimp-wue5.onrender.com";  // no https://, no path
 const int   WS_PORT   = 443;
-const char* WS_PATH   = "/device";
+// The server authenticates /device against DEVICE_TOKEN and refuses the
+// upgrade without a match, so the token rides along in the query string.
+const char* WS_PATH   = "/device?token=" DEVICE_TOKEN_VALUE;
 const bool  WS_SECURE = true;
 
 // Command 100% drives each motor at this fraction of full power.

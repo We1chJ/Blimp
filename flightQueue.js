@@ -1,8 +1,17 @@
+const { WebSocket } = require('ws');
+
+const { safeEqual, rateLimiter } = require('./security');
+
 const TURN_MS = 90000;
-const ADMIN_LOGIN_COOLDOWN_MS = 1000;
+
+// The old guard was a timestamp on the socket, which cost an attacker nothing
+// to reset - reconnect and the cooldown is gone. Throttle the address instead,
+// so opening a hundred sockets buys a hundred attempts from one bucket rather
+// than a hundred buckets.
+const adminLoginLimit = rateLimiter({ burst: 5, perMinute: 5 });
 
 function send(ws, obj) {
-  if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj));
+  if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(obj));
 }
 
 class FlightQueue {
@@ -58,11 +67,11 @@ class FlightQueue {
   }
 
   adminLogin(ws, password) {
-    const now = Date.now();
-    if (ws._adminAttemptAt && now - ws._adminAttemptAt < ADMIN_LOGIN_COOLDOWN_MS) return false;
-    ws._adminAttemptAt = now;
+    if (!adminLoginLimit(ws.ip || '')) return false;
     const expected = process.env.ADMIN_PASSWORD;
-    const ok = !!expected && password === expected;
+    // safeEqual, not ===, so a wrong guess takes the same time whatever
+    // prefix it shares with the real password
+    const ok = Boolean(expected) && typeof password === 'string' && safeEqual(password, expected);
     if (ok) ws.isAdmin = true;
     return ok;
   }

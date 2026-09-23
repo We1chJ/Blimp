@@ -1,3 +1,5 @@
+const { WebSocket } = require('ws');
+
 const TICK_MS      = 50;     // drain rate: 20 commands/sec
 const KEEPALIVE_MS = 800;    // must stay under the firmware's 2000ms failsafe
 const MAX_QUEUE    = 400;
@@ -35,7 +37,7 @@ class CommandQueue {
   }
 
   hasDevice() {
-    return !!this.device && this.device.readyState === 1;
+    return !!this.device && this.device.readyState === WebSocket.OPEN;
   }
 
   push(cmd) {
@@ -54,7 +56,7 @@ class CommandQueue {
 
   drain() {
     const ws = this.device;
-    if (!ws || ws.readyState !== 1) return;
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
     if (ws.bufferedAmount > MAX_BUFFER) return;
 
     const now = Date.now();

@@ -1,25 +1,78 @@
 const express = require('express');
 const http = require('http');
 const path = require('path');
-const { WebSocketServer } = require('ws');
+const { WebSocketServer, WebSocket } = require('ws');
 const { CommandQueue, TICK_MS } = require('./queue');
 const { FlightQueue } = require('./flightQueue');
+const { clientIp, rateLimiter, safeEqual, sameOrigin } = require('./security');
 const Stripe = require('stripe');
 
 const app = express();
 
+// Render (and Cloudflare in front of it) terminate TLS and forward the real
+// client address in X-Forwarded-For. Without this every request looks like it
+// came from the proxy, which would collapse all rate limiting into one bucket.
+app.set('trust proxy', 1);
+
 // Donations. Both keys have to be present or the button stays hidden, so the
 // blimp still runs for anyone who clones this without a Stripe account.
-const stripe = process.env.STRIPE_SECRET_KEY ? new Stripe(process.env.STRIPE_SECRET_KEY) : null;
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: '2025-08-27.basil' })
+  : null;
 const PUBLISHABLE_KEY = process.env.STRIPE_PUBLISHABLE_KEY || '';
 const DONATION_MIN = 100;      // $1
 const DONATION_MAX = 50000;    // $500
+
+// Creating a PaymentIntent costs nothing but is not free of consequence: an
+// open endpoint lets anyone fill the Stripe dashboard with abandoned intents.
+const donateLimit = rateLimiter({ burst: 5, perMinute: 5 });
+
+// The page is one inline <script> and one inline <style>, so script-src and
+// style-src need 'unsafe-inline' - a nonce or hash would disable it. That is
+// tolerable here because nothing renders untrusted input as HTML (every sink
+// is textContent), and the directives that actually matter against this app's
+// risks still bite: frame-ancestors stops the donate flow being clickjacked,
+// and connect/script/frame-src confine network reach to Stripe.
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' https://js.stripe.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "media-src 'self'",
+  "connect-src 'self' ws: wss: https://api.stripe.com https://js.stripe.com",
+  "frame-src https://js.stripe.com https://hooks.stripe.com",
+  "frame-ancestors 'none'",
+  "base-uri 'none'",
+  "form-action 'none'",
+  "object-src 'none'",
+].join('; ');
+
+app.use((req, res, next) => {
+  res.setHeader('Content-Security-Policy', CSP);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  next();
+});
 
 app.use(express.json({ limit: '4kb' }));
 // express skips dot-prefixed paths by default, which would 404 anything under
 // /.well-known - ACME challenges, and the Apple Pay association file if Stripe
 // ever falls back to asking us to host it.
-app.use(express.static(path.join(__dirname, 'public'), { dotfiles: 'allow' }));
+const CACHEABLE = /\.(mp4|jpg|jpeg|png|webp|svg|ico|woff2?)$/i;
+
+app.use(express.static(path.join(__dirname, 'public'), {
+  dotfiles: 'allow',
+  setHeaders(res, filePath) {
+    // The page carries all the markup, CSS and JS, so it IS the deploy: it has
+    // to revalidate every time or a cached copy keeps running old code against
+    // a new API. The media beside it is immutable in practice.
+    res.setHeader('Cache-Control', CACHEABLE.test(filePath)
+      ? 'public, max-age=604800'
+      : 'no-cache');
+  },
+}));
 
 app.get('/api/donate/config', (req, res) => {
   res.json({
@@ -34,6 +87,9 @@ app.get('/api/donate/config', (req, res) => {
 // the only thing worth enforcing is that it is a sane number of cents.
 app.post('/api/donate/intent', async (req, res) => {
   if (!stripe) return res.status(503).json({ error: 'Donations are not set up yet.' });
+  if (!donateLimit(clientIp(req))) {
+    return res.status(429).json({ error: 'Too many attempts. Wait a moment.' });
+  }
 
   const amount = Math.round(Number(req.body && req.body.amount));
   if (!Number.isFinite(amount) || amount < DONATION_MIN || amount > DONATION_MAX) {
@@ -65,16 +121,50 @@ const server = http.createServer(app);
 const deviceWss = new WebSocketServer({ noServer: true });
 const uiWss     = new WebSocketServer({ noServer: true });
 
+// Without a shared secret, anything that can reach /device IS the device: it
+// would be handed every motor command, could feed the UI arbitrary state, and
+// - because CommandQueue.attach drops the previous socket so only one board is
+// ever live - could knock the real blimp off the air just by connecting. The
+// repository is public and the hostname is in the firmware, so the endpoint is
+// not obscure. Fail closed: with no token configured, nothing may attach.
+const DEVICE_TOKEN = process.env.DEVICE_TOKEN || '';
+if (!DEVICE_TOKEN) {
+  console.warn('DEVICE_TOKEN is not set - /device will refuse every connection.');
+}
+
+function refuse(socket, status) {
+  socket.write(`HTTP/1.1 ${status}\r\nConnection: close\r\n\r\n`);
+  socket.destroy();
+}
+
 server.on('upgrade', (req, socket, head) => {
-  const url = req.url.split('?')[0];
-  const wss = url === '/device' ? deviceWss : url === '/ui' ? uiWss : null;
-  if (!wss) return socket.destroy();
-  wss.handleUpgrade(req, socket, head, ws => wss.emit('connection', ws, req));
+  let url;
+  try {
+    url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+  } catch {
+    return refuse(socket, '400 Bad Request');
+  }
+
+  if (url.pathname === '/device') {
+    const token = url.searchParams.get('token') || '';
+    if (!DEVICE_TOKEN || !safeEqual(token, DEVICE_TOKEN)) {
+      console.warn('device upgrade refused from ' + clientIp(req));
+      return refuse(socket, '401 Unauthorized');
+    }
+    return deviceWss.handleUpgrade(req, socket, head, ws => deviceWss.emit('connection', ws, req));
+  }
+
+  if (url.pathname === '/ui') {
+    if (!sameOrigin(req)) return refuse(socket, '403 Forbidden');
+    return uiWss.handleUpgrade(req, socket, head, ws => uiWss.emit('connection', ws, req));
+  }
+
+  refuse(socket, '404 Not Found');
 });
 
 function broadcastUi(obj) {
   const msg = JSON.stringify(obj);
-  uiWss.clients.forEach(c => { if (c.readyState === 1) c.send(msg); });
+  uiWss.clients.forEach(c => { if (c.readyState === WebSocket.OPEN) c.send(msg); });
 }
 
 const cq = new CommandQueue(depth => {
@@ -83,7 +173,7 @@ const cq = new CommandQueue(depth => {
 
 function broadcastQueue() {
   uiWss.clients.forEach(ws => {
-    if (ws.readyState !== 1) return;
+    if (ws.readyState !== WebSocket.OPEN) return;
     const { queue, you } = fq.snapshotFor(ws);
     ws.send(JSON.stringify(queue));
     ws.send(JSON.stringify(you));
@@ -103,7 +193,9 @@ function statusPayload() {
 }
 
 // ---------- device ----------
-deviceWss.on('connection', ws => {
+const MAX_STATE_CHARS = 200;
+
+deviceWss.on('connection', (ws, req) => {
   console.log('device connected');
   ws.isAlive = true;
   ws.on('pong', () => { ws.isAlive = true; });
@@ -111,7 +203,8 @@ deviceWss.on('connection', ws => {
   broadcastUi(statusPayload());
 
   ws.on('message', raw => {
-    broadcastUi({ type: 'state', data: raw.toString() });
+    // one short status line; the UI prints it verbatim
+    broadcastUi({ type: 'state', data: raw.toString().slice(0, MAX_STATE_CHARS) });
   });
 
   ws.on('close', () => {
@@ -145,7 +238,8 @@ function allow(ws) {
   return true;
 }
 
-uiWss.on('connection', ws => {
+uiWss.on('connection', (ws, req) => {
+  ws.ip = clientIp(req);
   ws.send(JSON.stringify(statusPayload()));
   broadcastUi(statusPayload());
 
