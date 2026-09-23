@@ -511,9 +511,13 @@
 </style>
 </head>
 <body>
-<video id="bg" autoplay muted loop playsinline poster="sky.jpg">
-  <source src="clouds.mp4" type="video/mp4">
-</video>
+<!-- No <source> and preload="none" on purpose: the clip is the heaviest thing
+     on the page by two orders of magnitude, and with it in the markup the
+     browser holds the load event - and its progress bar - open until the whole
+     file has arrived. The poster is the same still the body falls back to, so
+     the sky is there from the first paint either way. startSky() attaches the
+     source once the page has finished loading. -->
+<video id="bg" autoplay muted loop playsinline preload="none" poster="sky.jpg"></video>
 
 <svg width="0" height="0" aria-hidden="true" style="position:absolute">
   <filter id="lgDisplace" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">
@@ -926,6 +930,29 @@ addEventListener('beforeunload', e => {
 });
 
 // ---------------- info / about ----------------
+// ---------- background sky ----------
+// Decoration, so it waits for everything that is not: the socket, the queue,
+// the controls. Skipped outright for anyone who has asked for less motion or
+// is on a metered connection - there is no reason to spend their data on a
+// backdrop they will not see.
+function startSky() {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (navigator.connection && navigator.connection.saveData) return;
+
+  const source = document.createElement('source');
+  source.src = 'clouds.mp4';
+  source.type = 'video/mp4';
+  bg.appendChild(source);
+  bg.load();
+  // autoplay+muted is normally enough; a rejected promise just leaves the
+  // poster up, which is a fine place to end
+  const p = bg.play();
+  if (p) p.catch(() => {});
+}
+
+if (document.readyState === 'complete') startSky();
+else addEventListener('load', startSky, { once: true });
+
 // ---------- donations ----------
 // Apple Pay / Google Pay via Stripe's Express Checkout Element, confirmed in
 // place: `redirect: 'if_required'` keeps wallet payments on this page, so the
